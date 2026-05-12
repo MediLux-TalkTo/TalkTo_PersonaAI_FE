@@ -3,13 +3,35 @@ import 'package:flutter/material.dart';
 import '../../../shared/widgets/responsive_container.dart';
 
 class ChatMessage {
+  final String id;
   final String role;
   final String content;
+  final bool isLoading;
+  final bool feedbackSubmitted;
 
   ChatMessage({
+    required this.id,
     required this.role,
     required this.content,
+    this.isLoading = false,
+    this.feedbackSubmitted = false,
   });
+
+  ChatMessage copyWith({
+    String? id,
+    String? role,
+    String? content,
+    bool? isLoading,
+    bool? feedbackSubmitted,
+  }) {
+    return ChatMessage(
+      id: id ?? this.id,
+      role: role ?? this.role,
+      content: content ?? this.content,
+      isLoading: isLoading ?? this.isLoading,
+      feedbackSubmitted: feedbackSubmitted ?? this.feedbackSubmitted,
+    );
+  }
 }
 
 class ChatPage extends StatefulWidget {
@@ -25,20 +47,35 @@ class _ChatPageState extends State<ChatPage> {
 
   bool _isLoading = false;
   bool _isRecording = false;
+  bool _isPreparingResponse = false;
 
   final List<ChatMessage> _messages = [
     ChatMessage(
+      id: 'init',
       role: 'assistant',
       content: '왔니. 하고 싶은 말 있으면 천천히 말해봐.',
     ),
   ];
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   void _sendMessage() {
     final text = _controller.text.trim();
     if (text.isEmpty || _isLoading) return;
 
     setState(() {
-      _messages.add(ChatMessage(role: 'user', content: text));
+      _messages.add(
+        ChatMessage(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          role: 'user',
+          content: text,
+        ),
+      );
       _controller.clear();
       _isLoading = true;
     });
@@ -49,6 +86,7 @@ class _ChatPageState extends State<ChatPage> {
       setState(() {
         _messages.add(
           ChatMessage(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
             role: 'assistant',
             content: '우리 수연이, 그렇게 말해줘서 고맙다. 천천히 이야기해도 괜찮아.',
           ),
@@ -61,8 +99,61 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   void _toggleRecording() {
+    if (_isPreparingResponse) return;
+
+    if (!_isRecording) {
+      setState(() {
+        _isRecording = true;
+      });
+
+      return;
+    }
+
+    // 녹음 종료
     setState(() {
-      _isRecording = !_isRecording;
+      _isRecording = false;
+      _isPreparingResponse = true;
+    });
+
+    // mock transcript
+    const transcript = '할머니 오늘 너무 힘들었어';
+
+    _messages.add(
+      ChatMessage(
+        id: DateTime.now().toString(),
+        role: 'user',
+        content: transcript,
+      ),
+    );
+
+    // loading bubble
+    _messages.add(
+      ChatMessage(
+        id: 'loading',
+        role: 'assistant',
+        content: '할머니가 말하는 중...',
+        isLoading: true,
+      ),
+    );
+
+    _scrollToBottom();
+
+    Future.delayed(const Duration(seconds: 2), () {
+      setState(() {
+        _messages.removeWhere((m) => m.id == 'loading');
+
+        _messages.add(
+          ChatMessage(
+            id: DateTime.now().toString(),
+            role: 'assistant',
+            content: '우리 수연이 오늘 많이 힘들었구나. 너무 혼자 견디려고 하지 말고 천천히 이야기해도 괜찮아.',
+          ),
+        );
+
+        _isPreparingResponse = false;
+      });
+
+      _scrollToBottom();
     });
   }
 
@@ -96,6 +187,7 @@ class _ChatPageState extends State<ChatPage> {
               controller: _controller,
               isLoading: _isLoading,
               isRecording: _isRecording,
+              isPreparingResponse: _isPreparingResponse,
               onSend: _sendMessage,
               onVoiceTap: _toggleRecording,
             ),
@@ -224,9 +316,13 @@ class _ChatMessageList extends StatelessWidget {
         itemCount: messages.length + (isLoading ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == messages.length && isLoading) {
-            return const _AssistantBubble(
-              text: '할머니가 생각하고 있어요...',
-              isLoading: true,
+            return _AssistantBubble(
+              message: ChatMessage(
+                id: 'text-loading',
+                role: 'assistant',
+                content: '할머니가 생각하고 있어요...',
+                isLoading: true,
+              ),
             );
           }
 
@@ -237,7 +333,7 @@ class _ChatMessageList extends StatelessWidget {
             return _UserBubble(text: message.content);
           }
 
-          return _AssistantBubble(text: message.content);
+          return _AssistantBubble(message: message);
         },
       ),
     );
@@ -245,36 +341,78 @@ class _ChatMessageList extends StatelessWidget {
 }
 
 class _AssistantBubble extends StatelessWidget {
-  final String text;
-  final bool isLoading;
+  final ChatMessage message;
 
   const _AssistantBubble({
-    required this.text,
-    this.isLoading = false,
+    required this.message,
   });
 
   @override
   Widget build(BuildContext context) {
     return Align(
       alignment: Alignment.centerLeft,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 560),
-        margin: const EdgeInsets.only(bottom: 18),
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 22),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFE0E0E0)),
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 22,
-            height: 1.45,
-            color:
-                isLoading ? const Color(0xFF999999) : const Color(0xFF222222),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            constraints: const BoxConstraints(maxWidth: 560),
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 32,
+              vertical: 22,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(
+                color: const Color(0xFFE0E0E0),
+              ),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Text(
+              message.content,
+              style: TextStyle(
+                fontSize: 22,
+                height: 1.45,
+                color: message.isLoading
+                    ? const Color(0xFF999999)
+                    : const Color(0xFF222222),
+              ),
+            ),
           ),
-        ),
+
+          // feedback buttons
+          if (!message.isLoading)
+            Padding(
+              padding: const EdgeInsets.only(
+                left: 8,
+                bottom: 24,
+              ),
+              child: Row(
+                children: [
+                  _FeedbackChip(
+                    label: '좋았어요',
+                    icon: Icons.thumb_up_alt_outlined,
+                    onTap: () {},
+                  ),
+                  const SizedBox(width: 10),
+                  _FeedbackChip(
+                    label: '아쉬워요',
+                    icon: Icons.thumb_down_alt_outlined,
+                    onTap: () {},
+                  ),
+                  const SizedBox(width: 10),
+                  _FeedbackTextButton(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => const _FeedbackModal(),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -318,11 +456,13 @@ class _ChatInputBar extends StatelessWidget {
   final bool isRecording;
   final VoidCallback onSend;
   final VoidCallback onVoiceTap;
+  final bool isPreparingResponse;
 
   const _ChatInputBar({
     required this.controller,
     required this.isLoading,
     required this.isRecording,
+    required this.isPreparingResponse,
     required this.onSend,
     required this.onVoiceTap,
   });
@@ -399,7 +539,7 @@ class _ChatInputBar extends StatelessWidget {
                 height: 78,
                 width: 184,
                 child: ElevatedButton(
-                  onPressed: onVoiceTap,
+                  onPressed: isPreparingResponse ? null : onVoiceTap,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isRecording
                         ? const Color(0xFFB94343)
@@ -410,7 +550,11 @@ class _ChatInputBar extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    isRecording ? '● 듣는 중' : '● 말하기',
+                    isPreparingResponse
+                        ? '답변 준비 중...'
+                        : isRecording
+                            ? '● 듣는 중'
+                            : '● 말하기',
                     style: const TextStyle(
                       fontSize: 23,
                       fontWeight: FontWeight.w600,
@@ -460,6 +604,437 @@ class _FooterInfo extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FeedbackChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _FeedbackChip({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(100),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 10,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(100),
+          border: Border.all(
+            color: const Color(0xFFDADADA),
+          ),
+          color: Colors.white,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: const Color(0xFF666666),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF555555),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FeedbackTextButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _FeedbackTextButton({
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onTap,
+      child: const Text(
+        '피드백 남기기',
+        style: TextStyle(
+          fontSize: 14,
+          color: Color(0xFF777777),
+        ),
+      ),
+    );
+  }
+}
+
+class _FeedbackModal extends StatefulWidget {
+  const _FeedbackModal();
+
+  @override
+  State<_FeedbackModal> createState() => _FeedbackModalState();
+}
+
+class _FeedbackModalState extends State<_FeedbackModal> {
+  final TextEditingController _controller = TextEditingController();
+
+  String _selectedRating = '좋았어요';
+
+  final Set<String> _selectedTags = {
+    '위로가 됐어요',
+    '기억에 없는 말을 지어냈어요',
+  };
+
+  final List<String> _ratings = [
+    '좋았어요',
+    '보통이에요',
+    '아쉬웠어요',
+  ];
+
+  final List<String> _tags = [
+    '할머니 같았어요',
+    '위로가 됐어요',
+    '말투가 어색해요',
+    '사실이 틀렸어요',
+    '기억에 없는 말을 지어냈어요',
+    '목소리가 어색해요',
+    '섬뜩하거나 불편했어요',
+    '기타',
+  ];
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _toggleTag(String tag) {
+    setState(() {
+      if (_selectedTags.contains(tag)) {
+        _selectedTags.remove(tag);
+      } else {
+        _selectedTags.add(tag);
+      }
+    });
+  }
+
+  void _submitFeedback() {
+    final feedback = {
+      'rating': _selectedRating,
+      'tags': _selectedTags.toList(),
+      'comment': _controller.text.trim(),
+    };
+
+    debugPrint('feedback: $feedback');
+
+    Navigator.pop(context);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('피드백이 저장되었습니다.'),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      backgroundColor: Colors.transparent,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: 760,
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(48),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'S-02 피드백',
+                  style: TextStyle(
+                    fontSize: 22,
+                    color: Color(0xFFA0A0A0),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 28),
+                const Text(
+                  '이 답변은 어땠나요?',
+                  style: TextStyle(
+                    fontSize: 34,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF222222),
+                  ),
+                ),
+                const SizedBox(height: 42),
+                Row(
+                  children: _ratings.map((rating) {
+                    return Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 18),
+                        child: _RatingButton(
+                          label: rating,
+                          selected: _selectedRating == rating,
+                          onTap: () {
+                            setState(() {
+                              _selectedRating = rating;
+                            });
+                          },
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 40),
+                const Text(
+                  '구체적으로 선택해주세요',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF555555),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 14,
+                  children: _tags.map((tag) {
+                    final selected = _selectedTags.contains(tag);
+                    return _FeedbackTagChip(
+                      label: tag,
+                      selected: selected,
+                      onTap: () => _toggleTag(tag),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 40),
+                const Text(
+                  '구체적인 의견을 남겨주세요',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF555555),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                TextField(
+                  controller: _controller,
+                  minLines: 5,
+                  maxLines: 8,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    height: 1.4,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: '더 자세한 피드백을 남겨주시면 도움이 됩니다...',
+                    hintStyle: const TextStyle(
+                      color: Color(0xFF9A9A9A),
+                    ),
+                    contentPadding: const EdgeInsets.all(24),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFDADADA),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF222222),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 38),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 22,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFFB9D8FF),
+                    ),
+                  ),
+                  child: const Text(
+                    '이 피드백은 대표/개발팀의 기억 DB 보강 검토 대상으로 저장됩니다.',
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: Color(0xFF2454B8),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 42),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 72,
+                        child: ElevatedButton(
+                          onPressed: _submitFeedback,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF252525),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Text(
+                            '제출하기',
+                            style: TextStyle(
+                              fontSize: 23,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: SizedBox(
+                        height: 72,
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF222222),
+                            side: const BorderSide(
+                              color: Color(0xFFDADADA),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Text(
+                            '닫기',
+                            style: TextStyle(
+                              fontSize: 23,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RatingButton extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _RatingButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isPositive = label == '좋았어요';
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        height: 76,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected
+              ? isPositive
+                  ? const Color(0xFFF0FFF6)
+                  : const Color(0xFFF5F5F5)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: selected
+                ? isPositive
+                    ? const Color(0xFF2ECC71)
+                    : const Color(0xFF222222)
+                : const Color(0xFFDADADA),
+            width: selected ? 2 : 1.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: selected
+                ? isPositive
+                    ? const Color(0xFF098B3E)
+                    : const Color(0xFF222222)
+                : const Color(0xFF222222),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FeedbackTagChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FeedbackTagChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF252525) : const Color(0xFFF4F4F4),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : const Color(0xFF444444),
+          ),
+        ),
       ),
     );
   }
