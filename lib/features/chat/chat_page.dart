@@ -228,7 +228,7 @@ class _PersonaHeader extends StatelessWidget {
                 Text(
                   '할머니',
                   style: TextStyle(
-                    fontSize: 26,
+                    fontSize: 22,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF222222),
                   ),
@@ -237,7 +237,7 @@ class _PersonaHeader extends StatelessWidget {
                 Text(
                   '기록 기반 AI 페르소나',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 15,
                     color: Color(0xFF777777),
                   ),
                 ),
@@ -253,20 +253,20 @@ class _PersonaHeader extends StatelessWidget {
             child: const Text(
               '가족 내부 테스트 · 기록 기반 AI 페르소나',
               style: TextStyle(
-                fontSize: 17,
+                fontSize: 15,
                 color: Color(0xFF555555),
               ),
             ),
           ),
-          const SizedBox(width: 28),
-          const Text(
-            'Dev',
-            style: TextStyle(
-              fontSize: 18,
-              decoration: TextDecoration.underline,
-              color: Color(0xFF8A8A8A),
-            ),
-          ),
+          // const SizedBox(width: 28),
+          // const Text(
+          //   'Dev',
+          //   style: TextStyle(
+          //     fontSize: 15,
+          //     decoration: TextDecoration.underline,
+          //     color: Color(0xFF8A8A8A),
+          //   ),
+          // ),
         ],
       ),
     );
@@ -284,13 +284,6 @@ class _ScreenLabel extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 28),
       alignment: Alignment.centerLeft,
       color: const Color(0xFFFAFAFA),
-      child: const Text(
-        'S-01 통합 대화 · 텍스트 + Push-to-talk',
-        style: TextStyle(
-          fontSize: 17,
-          color: Color(0xFFA0A0A0),
-        ),
-      ),
     );
   }
 }
@@ -358,8 +351,8 @@ class _AssistantBubble extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: 560),
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.symmetric(
-              horizontal: 32,
-              vertical: 22,
+              horizontal: 22,
+              vertical: 12,
             ),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -371,7 +364,7 @@ class _AssistantBubble extends StatelessWidget {
             child: Text(
               message.content,
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 17,
                 height: 1.45,
                 color: message.isLoading
                     ? const Color(0xFF999999)
@@ -440,7 +433,7 @@ class _UserBubble extends StatelessWidget {
         child: Text(
           text,
           style: const TextStyle(
-            fontSize: 22,
+            fontSize: 17,
             height: 1.45,
             color: Colors.white,
           ),
@@ -487,7 +480,7 @@ class _ChatInputBar extends StatelessWidget {
                   enabled: !isLoading,
                   minLines: 1,
                   maxLines: 4,
-                  style: const TextStyle(fontSize: 21),
+                  style: const TextStyle(fontSize: 16),
                   onSubmitted: (_) => onSend(),
                   decoration: InputDecoration(
                     hintText: '할머니한테 하고 싶은 말을 적어보세요.',
@@ -513,7 +506,7 @@ class _ChatInputBar extends StatelessWidget {
               ),
               const SizedBox(width: 14),
               SizedBox(
-                height: 78,
+                height: 65,
                 width: 150,
                 child: ElevatedButton(
                   onPressed: isLoading ? null : onSend,
@@ -528,7 +521,7 @@ class _ChatInputBar extends StatelessWidget {
                   child: const Text(
                     '보내기',
                     style: TextStyle(
-                      fontSize: 23,
+                      fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -536,7 +529,7 @@ class _ChatInputBar extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               SizedBox(
-                height: 78,
+                height: 65,
                 width: 184,
                 child: ElevatedButton(
                   onPressed: isPreparingResponse ? null : onVoiceTap,
@@ -556,7 +549,7 @@ class _ChatInputBar extends StatelessWidget {
                             ? '● 듣는 중'
                             : '● 말하기',
                     style: const TextStyle(
-                      fontSize: 23,
+                      fontSize: 18,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -568,7 +561,7 @@ class _ChatInputBar extends StatelessWidget {
           const Text(
             '구체적인 사실은 기억에 근거가 있을 때만 답하도록 설계되어 있어요.',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 13,
               color: Color(0xFF7A7A7A),
             ),
           ),
@@ -599,7 +592,7 @@ class _FooterInfo extends StatelessWidget {
           Text(
             '비공개 링크 테스트 · anonymous_session_id 기준으로 사용 기록 저장',
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 12,
               color: Color(0xFF888888),
             ),
           ),
@@ -670,11 +663,26 @@ class _FeedbackTextButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextButton(
       onPressed: onTap,
+      style: ButtonStyle(
+        overlayColor: WidgetStateProperty.all(
+          Colors.transparent,
+        ),
+        splashFactory: NoSplash.splashFactory,
+        padding: WidgetStateProperty.all(
+          EdgeInsets.zero,
+        ),
+        minimumSize: WidgetStateProperty.all(
+          Size.zero,
+        ),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
       child: const Text(
         '피드백 남기기',
         style: TextStyle(
           fontSize: 14,
           color: Color(0xFF777777),
+          decoration: TextDecoration.underline,
+          decorationColor: Color(0xFF777777),
         ),
       ),
     );
@@ -769,23 +777,14 @@ class _FeedbackModalState extends State<_FeedbackModal> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'S-02 피드백',
-                  style: TextStyle(
-                    fontSize: 22,
-                    color: Color(0xFFA0A0A0),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 28),
-                const Text(
                   '이 답변은 어땠나요?',
                   style: TextStyle(
-                    fontSize: 34,
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF222222),
                   ),
                 ),
-                const SizedBox(height: 42),
+                const SizedBox(height: 30),
                 Row(
                   children: _ratings.map((rating) {
                     return Expanded(
@@ -804,11 +803,11 @@ class _FeedbackModalState extends State<_FeedbackModal> {
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 30),
                 const Text(
                   '구체적으로 선택해주세요',
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 17,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF555555),
                   ),
@@ -826,11 +825,11 @@ class _FeedbackModalState extends State<_FeedbackModal> {
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 30),
                 const Text(
                   '구체적인 의견을 남겨주세요',
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 17,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF555555),
                   ),
@@ -841,7 +840,7 @@ class _FeedbackModalState extends State<_FeedbackModal> {
                   minLines: 5,
                   maxLines: 8,
                   style: const TextStyle(
-                    fontSize: 22,
+                    fontSize: 14,
                     height: 1.4,
                   ),
                   decoration: InputDecoration(
@@ -868,8 +867,8 @@ class _FeedbackModalState extends State<_FeedbackModal> {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 22,
+                    horizontal: 20,
+                    vertical: 18,
                   ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFEFF6FF),
@@ -881,7 +880,7 @@ class _FeedbackModalState extends State<_FeedbackModal> {
                   child: const Text(
                     '이 피드백은 대표/개발팀의 기억 DB 보강 검토 대상으로 저장됩니다.',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 14,
                       color: Color(0xFF2454B8),
                       fontWeight: FontWeight.w600,
                     ),
@@ -892,7 +891,7 @@ class _FeedbackModalState extends State<_FeedbackModal> {
                   children: [
                     Expanded(
                       child: SizedBox(
-                        height: 72,
+                        height: 65,
                         child: ElevatedButton(
                           onPressed: _submitFeedback,
                           style: ElevatedButton.styleFrom(
@@ -905,7 +904,7 @@ class _FeedbackModalState extends State<_FeedbackModal> {
                           child: const Text(
                             '제출하기',
                             style: TextStyle(
-                              fontSize: 23,
+                              fontSize: 14,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -915,7 +914,7 @@ class _FeedbackModalState extends State<_FeedbackModal> {
                     const SizedBox(width: 20),
                     Expanded(
                       child: SizedBox(
-                        height: 72,
+                        height: 65,
                         child: OutlinedButton(
                           onPressed: () => Navigator.pop(context),
                           style: OutlinedButton.styleFrom(
@@ -930,7 +929,7 @@ class _FeedbackModalState extends State<_FeedbackModal> {
                           child: const Text(
                             '닫기',
                             style: TextStyle(
-                              fontSize: 23,
+                              fontSize: 14,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -967,7 +966,7 @@ class _RatingButton extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
       child: Container(
-        height: 76,
+        height: 65,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected
@@ -988,7 +987,7 @@ class _RatingButton extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 24,
+            fontSize: 15,
             fontWeight: FontWeight.w700,
             color: selected
                 ? isPositive
@@ -1030,7 +1029,7 @@ class _FeedbackTagChip extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 20,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
             color: selected ? Colors.white : const Color(0xFF444444),
           ),
