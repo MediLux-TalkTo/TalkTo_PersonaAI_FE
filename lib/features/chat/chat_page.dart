@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/widgets/responsive_container.dart';
+import '../admin/admin_dashboard_page.dart';
 
 class ChatMessage {
   final String id;
@@ -258,15 +259,24 @@ class _PersonaHeader extends StatelessWidget {
               ),
             ),
           ),
-          // const SizedBox(width: 28),
-          // const Text(
-          //   'Dev',
-          //   style: TextStyle(
-          //     fontSize: 15,
-          //     decoration: TextDecoration.underline,
-          //     color: Color(0xFF8A8A8A),
-          //   ),
-          // ),
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AdminDashboardPage(),
+                ),
+              );
+            },
+            child: const Text(
+              '관리자 대시보드',
+              style: TextStyle(
+                fontSize: 13,
+                color: Color(0xFF777777),
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ),
         ],
       ),
     );
