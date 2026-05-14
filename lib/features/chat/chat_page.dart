@@ -711,10 +711,7 @@ class _FeedbackModalState extends State<_FeedbackModal> {
 
   String _selectedRating = '좋았어요';
 
-  final Set<String> _selectedTags = {
-    '위로가 됐어요',
-    '기억에 없는 말을 지어냈어요',
-  };
+  final Set<String> _selectedTags = {};
 
   final List<String> _ratings = [
     '좋았어요',
@@ -774,10 +771,10 @@ class _FeedbackModalState extends State<_FeedbackModal> {
       backgroundColor: Colors.transparent,
       child: ConstrainedBox(
         constraints: const BoxConstraints(
-          maxWidth: 760,
+          maxWidth: 520,
         ),
         child: Container(
-          padding: const EdgeInsets.all(48),
+          padding: const EdgeInsets.all(28),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(28),
@@ -873,7 +870,7 @@ class _FeedbackModalState extends State<_FeedbackModal> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 38),
+                const SizedBox(height: 20),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
@@ -896,12 +893,12 @@ class _FeedbackModalState extends State<_FeedbackModal> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 42),
+                const SizedBox(height: 20),
                 Row(
                   children: [
                     Expanded(
                       child: SizedBox(
-                        height: 65,
+                        height: 50,
                         child: ElevatedButton(
                           onPressed: _submitFeedback,
                           style: ElevatedButton.styleFrom(
@@ -924,7 +921,7 @@ class _FeedbackModalState extends State<_FeedbackModal> {
                     const SizedBox(width: 20),
                     Expanded(
                       child: SizedBox(
-                        height: 65,
+                        height: 50,
                         child: OutlinedButton(
                           onPressed: () => Navigator.pop(context),
                           style: OutlinedButton.styleFrom(
@@ -967,6 +964,44 @@ class _RatingButton extends StatelessWidget {
     required this.selected,
     required this.onTap,
   });
+  Color get _selectedBgColor {
+    switch (label) {
+      case '좋았어요':
+        return const Color(0xFFEFFAF3);
+      case '보통이에요':
+        return const Color(0xFFF3F3F3);
+      case '아쉬웠어요':
+        return const Color(0xFFFFF1F1);
+      default:
+        return Colors.white;
+    }
+  }
+
+  Color get _selectedBorderColor {
+    switch (label) {
+      case '좋았어요':
+        return const Color(0xFF2ECC71);
+      case '보통이에요':
+        return const Color(0xFF9E9E9E);
+      case '아쉬웠어요':
+        return const Color(0xFFE74C3C);
+      default:
+        return const Color(0xFFDADADA);
+    }
+  }
+
+  Color get _selectedTextColor {
+    switch (label) {
+      case '좋았어요':
+        return const Color(0xFF0B8F45);
+      case '보통이에요':
+        return const Color(0xFF555555);
+      case '아쉬웠어요':
+        return const Color(0xFFD93025);
+      default:
+        return const Color(0xFF222222);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -974,36 +1009,24 @@ class _RatingButton extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(14),
       child: Container(
-        height: 65,
+        height: 50,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected
-              ? isPositive
-                  ? const Color(0xFFF0FFF6)
-                  : const Color(0xFFF5F5F5)
-              : Colors.white,
-          borderRadius: BorderRadius.circular(18),
+          color: selected ? _selectedBgColor : Colors.white,
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected
-                ? isPositive
-                    ? const Color(0xFF2ECC71)
-                    : const Color(0xFF222222)
-                : const Color(0xFFDADADA),
-            width: selected ? 2 : 1.5,
+            color: selected ? _selectedBorderColor : const Color(0xFFDADADA),
+            width: selected ? 1.8 : 1.2,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: selected
-                ? isPositive
-                    ? const Color(0xFF098B3E)
-                    : const Color(0xFF222222)
-                : const Color(0xFF222222),
+            color: selected ? _selectedTextColor : const Color(0xFF222222),
           ),
         ),
       ),
@@ -1029,8 +1052,8 @@ class _FeedbackTagChip extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 16,
+          horizontal: 14,
+          vertical: 10,
         ),
         decoration: BoxDecoration(
           color: selected ? const Color(0xFF252525) : const Color(0xFFF4F4F4),
