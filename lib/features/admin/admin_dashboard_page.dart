@@ -9,7 +9,7 @@ class AdminDashboardPage extends StatelessWidget {
       backgroundColor: const Color(0xFFFAFAFA),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
+          constraints: const BoxConstraints(maxWidth: 640),
           child: Column(
             children: [
               _AdminHeader(
@@ -158,7 +158,7 @@ class _MetricGrid extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < 640;
+        final isMobile = constraints.maxWidth < 480;
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -240,7 +240,7 @@ class _NegativeFeedbackGrid extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < 640;
+        final isMobile = constraints.maxWidth < 480;
 
         return GridView.builder(
           shrinkWrap: true,
@@ -316,92 +316,254 @@ class _ReviewList extends StatelessWidget {
   Widget build(BuildContext context) {
     final reviews = [
       _ReviewItemData(
-        tag: '사실이 틀렸어요',
-        message: '할머니는 이 표현을 자주 쓰지 않았어요.',
-        user: 'anonymous_session_01',
-        time: '2026-05-13 13:20',
+        time: '2026-04-29 14:23',
+        sessionId: 'session_1735478...a3f',
+        rating: '👍',
+        tags: ['할머니 같았어요', '위로가 됐어요'],
+        comment: '정말 할머니 목소리 같았어요.',
       ),
       _ReviewItemData(
-        tag: '기억에 없는 말을 지어냈어요',
-        message: '실제로 없던 가족 여행 이야기가 나왔습니다.',
-        user: 'anonymous_session_02',
-        time: '2026-05-13 13:05',
+        time: '2026-04-29 13:45',
+        sessionId: 'session_1735471...b2e',
+        rating: '👎',
+        tags: ['말투가 어색해요'],
+        comment: '조금 부자연스러워요.',
       ),
       _ReviewItemData(
-        tag: '목소리가 어색해요',
-        message: '말투는 괜찮았지만 음성이 조금 부자연스러웠습니다.',
-        user: 'anonymous_session_03',
-        time: '2026-05-13 12:52',
+        time: '2026-04-29 12:18',
+        sessionId: 'session_1735466...c4d',
+        rating: '👎',
+        tags: ['사실이 틀렸어요'],
+        comment: '할머니가 그렇게 말씀하신 적은 없어요.',
+      ),
+      _ReviewItemData(
+        time: '2026-04-29 11:02',
+        sessionId: 'session_1735461...e1f',
+        rating: '👎',
+        tags: ['섬뜩하거나 불편했어요'],
+        comment: '-',
       ),
     ];
 
-    return Column(
-      children: reviews.map((review) {
-        return _ReviewItem(review);
-      }).toList(),
-    );
-  }
-}
-
-class _ReviewItemData {
-  final String tag;
-  final String message;
-  final String user;
-  final String time;
-
-  _ReviewItemData({
-    required this.tag,
-    required this.message,
-    required this.user,
-    required this.time,
-  });
-}
-
-class _ReviewItem extends StatelessWidget {
-  final _ReviewItemData data;
-
-  const _ReviewItem(this.data);
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: const Color(0xFFE1E1E1)),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      clipBehavior: Clip.hardEdge,
+      child: Table(
+        columnWidths: const {
+          0: FixedColumnWidth(88),
+          1: FixedColumnWidth(105),
+          2: FixedColumnWidth(70),
+          3: FixedColumnWidth(120),
+          4: FlexColumnWidth(),
+        },
+        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
         children: [
-          Text(
-            data.tag,
-            style: const TextStyle(
-              fontSize: 15,
-              color: Color(0xFFD40000),
-              fontWeight: FontWeight.w600,
+          const TableRow(
+            decoration: BoxDecoration(
+              color: Color(0xFFFAFAFA),
             ),
+            children: [
+              _TableHeaderCell('일시'),
+              _TableHeaderCell('Session ID'),
+              _TableHeaderCell('평가'),
+              _TableHeaderCell('태그'),
+              _TableHeaderCell('코멘트'),
+            ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            data.message,
-            style: const TextStyle(
-              fontSize: 17,
-              color: Color(0xFF222222),
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '${data.user} · ${data.time}',
-            style: const TextStyle(
-              fontSize: 13,
-              color: Color(0xFF999999),
+          ...reviews.map(
+            (review) => TableRow(
+              decoration: const BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: Color(0xFFEFEFEF)),
+                ),
+              ),
+              children: [
+                _TableBodyCell(review.time),
+                _TableBodyCell(review.sessionId),
+                _RatingCell(review.rating),
+                _TagCell(review.tags),
+                _CommentCell(review.comment),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CommentCell extends StatelessWidget {
+  final String text;
+
+  const _CommentCell(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 14,
+      ),
+      child: Text(
+        text,
+        softWrap: true,
+        maxLines: null,
+        overflow: TextOverflow.visible,
+        style: const TextStyle(
+          fontSize: 12,
+          height: 1.45,
+          color: Color(0xFF555555),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReviewItemData {
+  final String time;
+  final String sessionId;
+  final String rating;
+  final List<String> tags;
+  final String comment;
+
+  _ReviewItemData({
+    required this.time,
+    required this.sessionId,
+    required this.rating,
+    required this.tags,
+    required this.comment,
+  });
+}
+
+class _TableHeaderCell extends StatelessWidget {
+  final String text;
+
+  const _TableHeaderCell(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 16,
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF555555),
+        ),
+      ),
+    );
+  }
+}
+
+class _TableBodyCell extends StatelessWidget {
+  final String text;
+
+  const _TableBodyCell(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 18,
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        child: Text(
+          text,
+          softWrap: true,
+          maxLines: null,
+          overflow: TextOverflow.visible,
+          style: const TextStyle(
+            fontSize: 13,
+            height: 1.5,
+            color: Color(0xFF555555),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RatingCell extends StatelessWidget {
+  final String rating;
+
+  const _RatingCell(this.rating);
+
+  @override
+  Widget build(BuildContext context) {
+    final isPositive = rating == '👍';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 18,
+      ),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: 6,
+          ),
+          decoration: BoxDecoration(
+            color:
+                isPositive ? const Color(0xFFE8FFF0) : const Color(0xFFFFE8E8),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            rating,
+            style: const TextStyle(fontSize: 14),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TagCell extends StatelessWidget {
+  final List<String> tags;
+
+  const _TagCell(this.tags);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 12,
+      ),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: tags.map((tag) {
+          return Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: 5,
+            ),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF4F4F4),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              tag,
+              style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFF444444),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
