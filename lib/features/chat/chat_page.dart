@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../shared/widgets/responsive_container.dart';
 import '../admin/admin_dashboard_page.dart';
+import '../chat/data/chat_api.dart';
 
 class ChatMessage {
   final String id;
@@ -45,6 +46,8 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ChatApi _chatApi = ChatApi();
+  String? _conversationId;
 
   bool _isLoading = false;
   bool _isRecording = false;
@@ -58,6 +61,27 @@ class _ChatPageState extends State<ChatPage> {
     ),
   ];
 
+  Future<void> _ensureConversation() async {
+    if (_conversationId != null) return;
+
+    final response = await _chatApi.createConversation();
+    debugPrint('createConversation response: $response');
+
+    final conversationData = response['data'];
+
+    if (conversationData == null) {
+      throw Exception('conversation data가 없습니다.');
+    }
+
+    final id = conversationData['id'];
+
+    if (id == null) {
+      throw Exception('conversationId를 찾을 수 없습니다.');
+    }
+
+    _conversationId = id.toString();
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -65,7 +89,7 @@ class _ChatPageState extends State<ChatPage> {
     super.dispose();
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _isLoading) return;
 
@@ -83,20 +107,63 @@ class _ChatPageState extends State<ChatPage> {
 
     _scrollToBottom();
 
-    Future.delayed(const Duration(seconds: 1), () {
+    try {
+      await _ensureConversation();
+
+      final response = await _chatApi.sendTextMessage(
+        conversationId: _conversationId!,
+        message: text,
+      );
+
+      final dynamic rawAssistantMessage = response['assistantMessage'] ??
+          response['message'] ??
+          response['data'] ??
+          response;
+
+      String assistantId = DateTime.now().millisecondsSinceEpoch.toString();
+      String assistantContent = '답변을 불러오지 못했습니다.';
+
+      if (rawAssistantMessage is Map<String, dynamic>) {
+        assistantId = (rawAssistantMessage['id'] ??
+                rawAssistantMessage['messageId'] ??
+                rawAssistantMessage['message_id'] ??
+                assistantId)
+            .toString();
+
+        assistantContent = (rawAssistantMessage['content'] ??
+                rawAssistantMessage['assistantMessage'] ??
+                rawAssistantMessage['text'] ??
+                assistantContent)
+            .toString();
+      } else if (rawAssistantMessage is String) {
+        assistantContent = rawAssistantMessage;
+      }
+
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            id: assistantId.toString(),
+            role: 'assistant',
+            content: assistantContent.toString(),
+          ),
+        );
+      });
+    } catch (e) {
       setState(() {
         _messages.add(
           ChatMessage(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             role: 'assistant',
-            content: '우리 수연이, 그렇게 말해줘서 고맙다. 천천히 이야기해도 괜찮아.',
+            content: '답변 생성에 실패했습니다. 다시 시도해주세요.',
           ),
         );
+      });
+    } finally {
+      setState(() {
         _isLoading = false;
       });
-
       _scrollToBottom();
-    });
+    }
   }
 
   void _toggleRecording() {
@@ -384,7 +451,7 @@ class _AssistantBubble extends StatelessWidget {
           ),
 
           // feedback buttons
-          if (!message.isLoading)
+          if (!message.isLoading && message.id != 'init')
             Padding(
               padding: const EdgeInsets.only(
                 left: 8,
@@ -408,7 +475,7 @@ class _AssistantBubble extends StatelessWidget {
                     onTap: () {
                       showDialog(
                         context: context,
-                        builder: (_) => const _FeedbackModal(),
+                        builder: (_) => _FeedbackModal(messageId: message.id),
                       );
                     },
                   ),
@@ -700,7 +767,11 @@ class _FeedbackTextButton extends StatelessWidget {
 }
 
 class _FeedbackModal extends StatefulWidget {
-  const _FeedbackModal();
+  final String messageId;
+
+  const _FeedbackModal({
+    required this.messageId,
+  });
 
   @override
   State<_FeedbackModal> createState() => _FeedbackModalState();
@@ -708,6 +779,7 @@ class _FeedbackModal extends StatefulWidget {
 
 class _FeedbackModalState extends State<_FeedbackModal> {
   final TextEditingController _controller = TextEditingController();
+  final ChatApi _chatApi = ChatApi();
 
   String _selectedRating = '좋았어요';
 
@@ -746,22 +818,32 @@ class _FeedbackModalState extends State<_FeedbackModal> {
     });
   }
 
-  void _submitFeedback() {
-    final feedback = {
-      'rating': _selectedRating,
-      'tags': _selectedTags.toList(),
-      'comment': _controller.text.trim(),
-    };
+  Future<void> _submitFeedback() async {
+    try {
+      await _chatApi.submitFeedback(
+        messageId: widget.messageId,
+        rating: _selectedRating,
+        tags: _selectedTags.toList(),
+        comment: _controller.text.trim(),
+      );
 
-    debugPrint('feedback: $feedback');
+      if (!mounted) return;
+      Navigator.pop(context);
 
-    Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('피드백이 저장되었습니다.'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('피드백이 저장되었습니다.'),
-      ),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('피드백 저장에 실패했습니다.'),
+        ),
+      );
+    }
   }
 
   @override

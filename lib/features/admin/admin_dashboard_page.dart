@@ -1,7 +1,23 @@
 import 'package:flutter/material.dart';
 
-class AdminDashboardPage extends StatelessWidget {
+import '../admin/data/admin_api.dart';
+
+class AdminDashboardPage extends StatefulWidget {
   const AdminDashboardPage({super.key});
+
+  @override
+  State<AdminDashboardPage> createState() => _AdminDashboardPageState();
+}
+
+class _AdminDashboardPageState extends State<AdminDashboardPage> {
+  final AdminApi _adminApi = AdminApi();
+  late final Future<AdminMetrics> _metricsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _metricsFuture = _adminApi.getMetrics();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,18 +36,36 @@ class AdminDashboardPage extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(28, 24, 28, 48),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      _SectionTitle('주요 메트릭'),
-                      SizedBox(height: 20),
-                      _MetricGrid(),
-                      SizedBox(height: 48),
-                      _SectionTitle('부정 피드백 큐'),
-                      SizedBox(height: 20),
-                      _NegativeFeedbackGrid(),
-                      SizedBox(height: 48),
-                      _SectionTitle('피드백 검토'),
-                      SizedBox(height: 20),
-                      _ReviewList(),
+                    children: [
+                      const _SectionTitle('주요 메트릭'),
+                      const SizedBox(height: 20),
+                      FutureBuilder<AdminMetrics>(
+                        future: _metricsFuture,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const _MetricLoadingBox();
+                          }
+
+                          if (snapshot.hasError) {
+                            return _MetricErrorBox(
+                              message: snapshot.error.toString(),
+                            );
+                          }
+
+                          return _MetricGrid(
+                            metrics: snapshot.data!,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 48),
+                      const _SectionTitle('부정 피드백 큐'),
+                      const SizedBox(height: 20),
+                      const _NegativeFeedbackGrid(),
+                      const SizedBox(height: 48),
+                      const _SectionTitle('피드백 검토'),
+                      const SizedBox(height: 20),
+                      const _ReviewList(),
                     ],
                   ),
                 ),
@@ -139,30 +173,35 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _MetricGrid extends StatelessWidget {
-  const _MetricGrid();
+  final AdminMetrics metrics;
+
+  const _MetricGrid({
+    required this.metrics,
+  });
+
+  String _toPercent(double value) {
+    return '${(value * 100).round()}%';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final metrics = [
-      ('28', '총 접속 세션'),
-      ('24', '총 대화 세션'),
-      ('142', '총 사용자 메시지'),
-      ('138', '총 AI 답변'),
-      ('34', 'Push-to-talk 시도'),
-      ('31', '음성 응답 완료'),
-      ('76%', '긍정 피드백 비율'),
-      ('24%', '부정 피드백 비율'),
-      ('8.8%', 'STT 실패율'),
-      ('3.2%', 'TTS 실패율'),
+    final metricItems = [
+      (metrics.usersTotal.toString(), '총 사용자 수'),
+      (metrics.conversationsTotal.toString(), '총 대화 세션'),
+      (metrics.messagesTotal.toString(), '총 메시지'),
+      (metrics.voiceMessagesTotal.toString(), '음성 메시지'),
+      (_toPercent(metrics.feedbackPositiveRatio), '긍정 피드백 비율'),
+      (_toPercent(metrics.feedbackNegativeRatio), '부정 피드백 비율'),
     ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 480;
+
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: metrics.length,
+          itemCount: metricItems.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: isMobile ? 1 : 2,
             mainAxisSpacing: 16,
@@ -170,7 +209,8 @@ class _MetricGrid extends StatelessWidget {
             mainAxisExtent: 76,
           ),
           itemBuilder: (context, index) {
-            final item = metrics[index];
+            final item = metricItems[index];
+
             return _MetricCard(
               value: item.$1,
               label: item.$2,
@@ -221,6 +261,59 @@ class _MetricCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MetricLoadingBox extends StatelessWidget {
+  const _MetricLoadingBox();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 120,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE1E1E1)),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: const Text(
+        '메트릭을 불러오는 중입니다...',
+        style: TextStyle(
+          fontSize: 13,
+          color: Color(0xFF777777),
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricErrorBox extends StatelessWidget {
+  final String message;
+
+  const _MetricErrorBox({
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF2F2),
+        border: Border.all(color: const Color(0xFFFFB8B8)),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Text(
+        '메트릭을 불러오지 못했습니다.\n$message',
+        style: const TextStyle(
+          fontSize: 13,
+          height: 1.5,
+          color: Color(0xFFD40000),
+        ),
       ),
     );
   }
