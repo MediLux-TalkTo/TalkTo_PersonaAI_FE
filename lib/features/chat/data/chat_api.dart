@@ -1,13 +1,19 @@
+import 'package:dio/dio.dart';
+
 import '../../../core/network/api_client.dart';
 
 class ChatApi {
-  Future<Map<String, dynamic>> createConversation() async {
+  Future<Map<String, dynamic>> createConversation({
+    String personaId = 'persona-grandma-001',
+    String channel = 'TEXT',
+    String title = '주말 대화',
+  }) async {
     final response = await ApiClient.dio.post(
       '/conversations',
       data: {
-        'personaId': 'persona-grandma-001',
-        'channel': 'TEXT',
-        'title': '주말 대화',
+        'personaId': personaId,
+        'channel': channel,
+        'title': title,
       },
     );
 
@@ -16,12 +22,20 @@ class ChatApi {
 
   Future<List<dynamic>> getConversations() async {
     final response = await ApiClient.dio.get('/conversations');
-    return List<dynamic>.from(response.data);
+
+    final data = response.data['data'];
+    if (data is List) return data;
+
+    return [];
   }
 
   Future<Map<String, dynamic>> getConversationDetail(
-      String conversationId) async {
-    final response = await ApiClient.dio.get('/conversations/$conversationId');
+    String conversationId,
+  ) async {
+    final response = await ApiClient.dio.get(
+      '/conversations/$conversationId',
+    );
+
     return Map<String, dynamic>.from(response.data);
   }
 
@@ -41,13 +55,21 @@ class ChatApi {
 
   Future<Map<String, dynamic>> sendVoiceMessage({
     required String conversationId,
-    required String sttText,
+    required String audioPath,
   }) async {
+    final formData = FormData.fromMap({
+      'audio': await MultipartFile.fromFile(
+        audioPath,
+        filename: audioPath.split('/').last,
+      ),
+    });
+
     final response = await ApiClient.dio.post(
       '/conversations/$conversationId/messages/voice',
-      data: {
-        'sttText': sttText,
-      },
+      data: formData,
+      options: Options(
+        contentType: 'multipart/form-data',
+      ),
     );
 
     return Map<String, dynamic>.from(response.data);
@@ -67,10 +89,5 @@ class ChatApi {
         'comment': comment,
       },
     );
-  }
-
-  Future<List<dynamic>> getAdminFeedback() async {
-    final response = await ApiClient.dio.get('/admin/feedback');
-    return List<dynamic>.from(response.data);
   }
 }

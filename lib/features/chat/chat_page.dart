@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:record/record.dart';
 
 import '../../../shared/widgets/responsive_container.dart';
 import '../admin/admin_dashboard_page.dart';
@@ -49,6 +50,8 @@ class _ChatPageState extends State<ChatPage> {
   final ChatApi _chatApi = ChatApi();
   String? _conversationId;
 
+  final AudioRecorder _audioRecorder = AudioRecorder();
+
   bool _isLoading = false;
   bool _isRecording = false;
   bool _isPreparingResponse = false;
@@ -86,6 +89,7 @@ class _ChatPageState extends State<ChatPage> {
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
+    _audioRecorder.dispose();
     super.dispose();
   }
 
@@ -166,10 +170,33 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  void _toggleRecording() {
-    if (_isPreparingResponse) return;
+  Future<void> _toggleRecording() async {
+    if (_isPreparingResponse || _isLoading) return;
 
     if (!_isRecording) {
+      final hasPermission = await _audioRecorder.hasPermission();
+
+      if (!hasPermission) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('마이크 권한이 필요합니다.'),
+          ),
+        );
+        return;
+      }
+
+      await _audioRecorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.wav,
+          sampleRate: 16000,
+          numChannels: 1,
+        ),
+        path: 'talkto_voice_${DateTime.now().millisecondsSinceEpoch}.wav',
+      );
+
+      if (!mounted) return;
+
       setState(() {
         _isRecording = true;
       });
@@ -177,52 +204,105 @@ class _ChatPageState extends State<ChatPage> {
       return;
     }
 
-    // 녹음 종료
+    final path = await _audioRecorder.stop();
+
     setState(() {
       _isRecording = false;
       _isPreparingResponse = true;
     });
 
-    // mock transcript
-    const transcript = '할머니 오늘 너무 힘들었어';
+    debugPrint('recorded audio path: $path');
 
-    _messages.add(
-      ChatMessage(
-        id: DateTime.now().toString(),
-        role: 'user',
-        content: transcript,
-      ),
-    );
+    if (path == null) {
+      setState(() {
+        _isPreparingResponse = false;
+      });
 
-    // loading bubble
-    _messages.add(
-      ChatMessage(
-        id: 'loading',
-        role: 'assistant',
-        content: '할머니가 말하는 중...',
-        isLoading: true,
-      ),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('녹음 파일을 생성하지 못했습니다.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _messages.add(
+        ChatMessage(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          role: 'user',
+          content: '음성 메시지를 보냈어요.',
+        ),
+      );
+
+      _messages.add(
+        ChatMessage(
+          id: 'voice-loading',
+          role: 'assistant',
+          content: '할머니가 말하는 중...',
+          isLoading: true,
+        ),
+      );
+    });
 
     _scrollToBottom();
 
-    Future.delayed(const Duration(seconds: 2), () {
+    try {
+      await _ensureConversation();
+
+      final response = await _chatApi.sendVoiceMessage(
+        conversationId: _conversationId!,
+        audioPath: path,
+      );
+
+      final data = response['data'] ?? response;
+
+      final assistantId = (data['assistantMessageId'] ??
+              data['messageId'] ??
+              data['id'] ??
+              DateTime.now().millisecondsSinceEpoch)
+          .toString();
+
+      final assistantContent = (data['assistantText'] ??
+              data['content'] ??
+              data['text'] ??
+              '음성 답변을 불러오지 못했습니다.')
+          .toString();
+
+      if (!mounted) return;
+
       setState(() {
-        _messages.removeWhere((m) => m.id == 'loading');
+        _messages.removeWhere((m) => m.id == 'voice-loading');
 
         _messages.add(
           ChatMessage(
-            id: DateTime.now().toString(),
+            id: assistantId,
             role: 'assistant',
-            content: '우리 수연이 오늘 많이 힘들었구나. 너무 혼자 견디려고 하지 말고 천천히 이야기해도 괜찮아.',
+            content: assistantContent,
           ),
         );
 
         _isPreparingResponse = false;
       });
+    } catch (e) {
+      if (!mounted) return;
 
-      _scrollToBottom();
-    });
+      setState(() {
+        _messages.removeWhere((m) => m.id == 'voice-loading');
+
+        _messages.add(
+          ChatMessage(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            role: 'assistant',
+            content: '음성 답변 생성에 실패했습니다. 다시 시도해주세요.',
+          ),
+        );
+
+        _isPreparingResponse = false;
+      });
+    }
+
+    _scrollToBottom();
   }
 
   void _scrollToBottom() {
@@ -356,7 +436,7 @@ class _ScreenLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 58,
+      height: 20,
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 28),
       alignment: Alignment.centerLeft,
@@ -382,10 +462,16 @@ class _ChatMessageList extends StatelessWidget {
       color: const Color(0xFFFAFAFA),
       child: ListView.builder(
         controller: scrollController,
-        padding: const EdgeInsets.fromLTRB(28, 36, 28, 36),
-        itemCount: messages.length + (isLoading ? 1 : 0),
+        padding: const EdgeInsets.fromLTRB(28, 20, 28, 36),
+        itemCount: messages.length + (isLoading ? 1 : 0) + 1,
         itemBuilder: (context, index) {
-          if (index == messages.length && isLoading) {
+          if (index == 0) {
+            return const _ChatGuideText();
+          }
+
+          final messageIndex = index - 1;
+
+          if (messageIndex == messages.length && isLoading) {
             return _AssistantBubble(
               message: ChatMessage(
                 id: 'text-loading',
@@ -396,7 +482,7 @@ class _ChatMessageList extends StatelessWidget {
             );
           }
 
-          final message = messages[index];
+          final message = messages[messageIndex];
           final isUser = message.role == 'user';
 
           if (isUser) {
@@ -405,6 +491,28 @@ class _ChatMessageList extends StatelessWidget {
 
           return _AssistantBubble(message: message);
         },
+      ),
+    );
+  }
+}
+
+class _ChatGuideText extends StatelessWidget {
+  const _ChatGuideText();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.only(bottom: 28),
+      child: Center(
+        child: Text(
+          '글로 쓰거나, 오른쪽 말하기 버튼을 눌러 이야기할 수 있어요.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 14,
+            color: Color(0xFF888888),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
     );
   }
@@ -609,7 +717,8 @@ class _ChatInputBar extends StatelessWidget {
                 height: 65,
                 width: 184,
                 child: ElevatedButton(
-                  onPressed: isPreparingResponse ? null : onVoiceTap,
+                  onPressed:
+                      (isPreparingResponse || isLoading) ? null : onVoiceTap,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: isRecording
                         ? const Color(0xFFB94343)
