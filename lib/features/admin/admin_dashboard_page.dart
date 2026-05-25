@@ -470,54 +470,77 @@ class _ReviewList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Container(
-        constraints: const BoxConstraints(minWidth: 720),
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
+    if (reviews.isEmpty) {
+      return Container(
         width: double.infinity,
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(color: const Color(0xFFE1E1E1)),
           borderRadius: BorderRadius.circular(18),
         ),
-        clipBehavior: Clip.hardEdge,
-        child: Table(
-          columnWidths: const {
-            0: FixedColumnWidth(88),
-            1: FixedColumnWidth(105),
-            2: FixedColumnWidth(70),
-            3: FixedColumnWidth(120),
-            4: FlexColumnWidth(),
-          },
-          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-          children: [
-            const TableRow(
-              decoration: BoxDecoration(color: Color(0xFFFAFAFA)),
-              children: [
-                _TableHeaderCell('일시'),
-                _TableHeaderCell('Session ID'),
-                _TableHeaderCell('평가'),
-                _TableHeaderCell('태그'),
-                _TableHeaderCell('코멘트'),
-              ],
-            ),
-            ...reviews.map(
-              (review) => TableRow(
-                decoration: const BoxDecoration(
-                  border: Border(
-                    top: BorderSide(color: Color(0xFFEFEFEF)),
-                  ),
-                ),
+        child: const Text(
+          '아직 등록된 피드백이 없습니다.',
+          style: TextStyle(
+            fontSize: 13,
+            color: Color(0xFF777777),
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: SizedBox(
+        width: isMobile ? 720 : 640,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: const Color(0xFFE1E1E1)),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Table(
+            columnWidths: const {
+              0: FixedColumnWidth(88),
+              1: FixedColumnWidth(105),
+              2: FixedColumnWidth(70),
+              3: FixedColumnWidth(120),
+              4: FlexColumnWidth(),
+            },
+            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+            children: [
+              const TableRow(
+                decoration: BoxDecoration(color: Color(0xFFFAFAFA)),
                 children: [
-                  _TableBodyCell(review.time),
-                  _TableBodyCell(review.sessionId),
-                  _RatingCell(review.rating),
-                  _TagCell(review.tags),
-                  _CommentCell(review.comment),
+                  _TableHeaderCell('일시'),
+                  _TableHeaderCell('Session ID'),
+                  _TableHeaderCell('평가'),
+                  _TableHeaderCell('태그'),
+                  _TableHeaderCell('코멘트'),
                 ],
               ),
-            ),
-          ],
+              ...reviews.map(
+                (review) => TableRow(
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Color(0xFFEFEFEF)),
+                    ),
+                  ),
+                  children: [
+                    _TableBodyCell(review.time),
+                    _TableBodyCell(review.sessionId),
+                    _RatingCell(review.rating),
+                    _TagCell(review.tags),
+                    _CommentCell(review.comment),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
