@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_client.dart';
 
@@ -46,7 +47,7 @@ class ChatApi {
     final response = await ApiClient.dio.post(
       '/conversations/$conversationId/messages/text',
       data: {
-        'message': message,
+        'content': message,
       },
     );
 
@@ -56,12 +57,40 @@ class ChatApi {
   Future<Map<String, dynamic>> sendVoiceMessage({
     required String conversationId,
     required String audioPath,
+    String? personaId,
+    String? sttText,
   }) async {
-    final formData = FormData.fromMap({
-      'audio': await MultipartFile.fromFile(
+    final MultipartFile audioFile;
+
+    if (kIsWeb && audioPath.startsWith('blob:')) {
+      final blobResponse = await Dio().get<List<int>>(
+        audioPath,
+        options: Options(
+          responseType: ResponseType.bytes,
+        ),
+      );
+
+      final bytes = blobResponse.data;
+
+      if (bytes == null || bytes.isEmpty) {
+        throw Exception('녹음 파일 bytes를 읽지 못했습니다.');
+      }
+
+      audioFile = MultipartFile.fromBytes(
+        bytes,
+        filename: 'voice_${DateTime.now().millisecondsSinceEpoch}.wav',
+      );
+    } else {
+      audioFile = await MultipartFile.fromFile(
         audioPath,
         filename: audioPath.split('/').last,
-      ),
+      );
+    }
+
+    final formData = FormData.fromMap({
+      'audio_file': audioFile,
+      if (personaId != null) 'personaId': personaId,
+      if (sttText != null && sttText.isNotEmpty) 'sttText': sttText,
     });
 
     final response = await ApiClient.dio.post(
@@ -75,13 +104,13 @@ class ChatApi {
     return Map<String, dynamic>.from(response.data);
   }
 
-  Future<void> submitFeedback({
+  Future<Map<String, dynamic>> submitFeedback({
     required String messageId,
     required String rating,
     required List<String> tags,
     required String comment,
   }) async {
-    await ApiClient.dio.post(
+    final response = await ApiClient.dio.post(
       '/messages/$messageId/feedback',
       data: {
         'rating': rating,
@@ -89,5 +118,12 @@ class ChatApi {
         'comment': comment,
       },
     );
+
+    return Map<String, dynamic>.from(response.data);
+  }
+
+  Future<Map<String, dynamic>> getActivePersona() async {
+    final response = await ApiClient.dio.get('/personas/active');
+    return Map<String, dynamic>.from(response.data);
   }
 }

@@ -11,6 +11,8 @@ class ChatMessage {
   final String content;
   final bool isLoading;
   final bool feedbackSubmitted;
+  final String? quickFeedback;
+  final bool canFeedback;
 
   ChatMessage({
     required this.id,
@@ -18,6 +20,8 @@ class ChatMessage {
     required this.content,
     this.isLoading = false,
     this.feedbackSubmitted = false,
+    this.quickFeedback,
+    this.canFeedback = false,
   });
 
   ChatMessage copyWith({
@@ -26,6 +30,8 @@ class ChatMessage {
     String? content,
     bool? isLoading,
     bool? feedbackSubmitted,
+    String? quickFeedback,
+    bool? canFeedback,
   }) {
     return ChatMessage(
       id: id ?? this.id,
@@ -33,6 +39,8 @@ class ChatMessage {
       content: content ?? this.content,
       isLoading: isLoading ?? this.isLoading,
       feedbackSubmitted: feedbackSubmitted ?? this.feedbackSubmitted,
+      quickFeedback: quickFeedback ?? this.quickFeedback,
+      canFeedback: canFeedback ?? this.canFeedback,
     );
   }
 }
@@ -49,6 +57,9 @@ class _ChatPageState extends State<ChatPage> {
   final ScrollController _scrollController = ScrollController();
   final ChatApi _chatApi = ChatApi();
   String? _conversationId;
+  String? _activePersonaId;
+  String _personaName = '할머니';
+  String _personaDescription = '기록 기반 AI 페르소나';
 
   final AudioRecorder _audioRecorder = AudioRecorder();
 
@@ -64,11 +75,48 @@ class _ChatPageState extends State<ChatPage> {
     ),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadActivePersona();
+  }
+
+  Future<void> _loadActivePersona() async {
+    try {
+      final response = await _chatApi.getActivePersona();
+      final data = response['data'];
+
+      if (data == null || data is! Map<String, dynamic>) return;
+
+      if (!mounted) return;
+
+      setState(() {
+        _activePersonaId = data['id']?.toString();
+        _personaName = data['displayName']?.toString() ?? '할머니';
+        _personaDescription =
+            data['description']?.toString() ?? '기록 기반 AI 페르소나';
+      });
+    } catch (e) {
+      debugPrint('active persona load error: $e');
+    }
+  }
+
   Future<void> _ensureConversation() async {
     if (_conversationId != null) return;
 
-    final response = await _chatApi.createConversation();
-    debugPrint('createConversation response: $response');
+    if (_activePersonaId == null) {
+      await _loadActivePersona();
+    }
+
+    if (_activePersonaId == null) {
+      throw Exception('활성 페르소나를 찾을 수 없습니다.');
+    }
+
+    final response = await _chatApi.createConversation(
+      personaId: _activePersonaId!,
+      channel: 'TEXT',
+      title: '할머니와의 대화',
+    );
 
     final conversationData = response['data'];
 
@@ -83,6 +131,36 @@ class _ChatPageState extends State<ChatPage> {
     }
 
     _conversationId = id.toString();
+  }
+
+  Future<void> _submitQuickFeedback(String messageId, String rating) async {
+    setState(() {
+      final index = _messages.indexWhere((m) => m.id == messageId);
+
+      if (index != -1) {
+        _messages[index] = _messages[index].copyWith(
+          quickFeedback: rating,
+          feedbackSubmitted: true,
+        );
+      }
+    });
+
+    try {
+      await _chatApi.submitFeedback(
+        messageId: messageId,
+        rating: rating,
+        tags: const [],
+        comment: '',
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('피드백 저장에 실패했습니다.'),
+        ),
+      );
+    }
   }
 
   @override
@@ -105,6 +183,7 @@ class _ChatPageState extends State<ChatPage> {
           content: text,
         ),
       );
+
       _controller.clear();
       _isLoading = true;
     });
@@ -119,40 +198,39 @@ class _ChatPageState extends State<ChatPage> {
         message: text,
       );
 
-      final dynamic rawAssistantMessage = response['assistantMessage'] ??
-          response['message'] ??
-          response['data'] ??
-          response;
+      final data = response['data'];
 
-      String assistantId = DateTime.now().millisecondsSinceEpoch.toString();
-      String assistantContent = '답변을 불러오지 못했습니다.';
-
-      if (rawAssistantMessage is Map<String, dynamic>) {
-        assistantId = (rawAssistantMessage['id'] ??
-                rawAssistantMessage['messageId'] ??
-                rawAssistantMessage['message_id'] ??
-                assistantId)
-            .toString();
-
-        assistantContent = (rawAssistantMessage['content'] ??
-                rawAssistantMessage['assistantMessage'] ??
-                rawAssistantMessage['text'] ??
-                assistantContent)
-            .toString();
-      } else if (rawAssistantMessage is String) {
-        assistantContent = rawAssistantMessage;
+      if (data == null || data is! Map<String, dynamic>) {
+        throw Exception('response data가 없습니다: $response');
       }
+
+      final assistantMessage = data['assistantMessage'];
+
+      if (assistantMessage == null ||
+          assistantMessage is! Map<String, dynamic>) {
+        throw Exception('assistantMessage가 없습니다: $data');
+      }
+
+      final assistantId =
+          (assistantMessage['id'] ?? DateTime.now().millisecondsSinceEpoch)
+              .toString();
+
+      final assistantContent =
+          (assistantMessage['content'] ?? '답변을 불러오지 못했습니다.').toString();
 
       setState(() {
         _messages.add(
           ChatMessage(
-            id: assistantId.toString(),
+            id: assistantId,
             role: 'assistant',
-            content: assistantContent.toString(),
+            content: assistantContent,
+            canFeedback: true,
           ),
         );
       });
     } catch (e) {
+      debugPrint('sendMessage error: $e');
+
       setState(() {
         _messages.add(
           ChatMessage(
@@ -166,6 +244,7 @@ class _ChatPageState extends State<ChatPage> {
       setState(() {
         _isLoading = false;
       });
+
       _scrollToBottom();
     }
   }
@@ -255,19 +334,25 @@ class _ChatPageState extends State<ChatPage> {
         audioPath: path,
       );
 
-      final data = response['data'] ?? response;
+      final data = response['data'];
 
-      final assistantId = (data['assistantMessageId'] ??
-              data['messageId'] ??
-              data['id'] ??
-              DateTime.now().millisecondsSinceEpoch)
-          .toString();
+      if (data == null || data is! Map<String, dynamic>) {
+        throw Exception('voice response data가 없습니다: $response');
+      }
 
-      final assistantContent = (data['assistantText'] ??
-              data['content'] ??
-              data['text'] ??
-              '음성 답변을 불러오지 못했습니다.')
-          .toString();
+      final assistantMessage = data['assistantMessage'];
+
+      if (assistantMessage == null ||
+          assistantMessage is! Map<String, dynamic>) {
+        throw Exception('voice assistantMessage가 없습니다: $data');
+      }
+
+      final assistantId =
+          (assistantMessage['id'] ?? DateTime.now().millisecondsSinceEpoch)
+              .toString();
+
+      final assistantContent =
+          (assistantMessage['content'] ?? '음성 답변을 불러오지 못했습니다.').toString();
 
       if (!mounted) return;
 
@@ -279,6 +364,7 @@ class _ChatPageState extends State<ChatPage> {
             id: assistantId,
             role: 'assistant',
             content: assistantContent,
+            canFeedback: true,
           ),
         );
 
@@ -322,13 +408,17 @@ class _ChatPageState extends State<ChatPage> {
       body: ResponsiveContainer(
         child: Column(
           children: [
-            const _PersonaHeader(),
+            _PersonaHeader(
+              name: _personaName,
+              description: _personaDescription,
+            ),
             const _ScreenLabel(),
             Expanded(
               child: _ChatMessageList(
                 messages: _messages,
                 isLoading: _isLoading,
                 scrollController: _scrollController,
+                onQuickFeedback: _submitQuickFeedback,
               ),
             ),
             _ChatInputBar(
@@ -348,7 +438,13 @@ class _ChatPageState extends State<ChatPage> {
 }
 
 class _PersonaHeader extends StatelessWidget {
-  const _PersonaHeader();
+  final String name;
+  final String description;
+
+  const _PersonaHeader({
+    required this.name,
+    required this.description,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -368,23 +464,23 @@ class _PersonaHeader extends StatelessWidget {
             backgroundColor: Color(0xFFE1E1E1),
           ),
           const SizedBox(width: 18),
-          const Expanded(
+          Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '할머니',
-                  style: TextStyle(
+                  name,
+                  style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF222222),
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  '기록 기반 AI 페르소나',
-                  style: TextStyle(
+                  description,
+                  style: const TextStyle(
                     fontSize: 15,
                     color: Color(0xFF777777),
                   ),
@@ -449,11 +545,13 @@ class _ChatMessageList extends StatelessWidget {
   final List<ChatMessage> messages;
   final bool isLoading;
   final ScrollController scrollController;
+  final Future<void> Function(String messageId, String rating)? onQuickFeedback;
 
   const _ChatMessageList({
     required this.messages,
     required this.isLoading,
     required this.scrollController,
+    required this.onQuickFeedback,
   });
 
   @override
@@ -489,7 +587,10 @@ class _ChatMessageList extends StatelessWidget {
             return _UserBubble(text: message.content);
           }
 
-          return _AssistantBubble(message: message);
+          return _AssistantBubble(
+            message: message,
+            onQuickFeedback: onQuickFeedback,
+          );
         },
       ),
     );
@@ -520,9 +621,11 @@ class _ChatGuideText extends StatelessWidget {
 
 class _AssistantBubble extends StatelessWidget {
   final ChatMessage message;
+  final Future<void> Function(String messageId, String rating)? onQuickFeedback;
 
   const _AssistantBubble({
     required this.message,
+    this.onQuickFeedback,
   });
 
   @override
@@ -559,7 +662,7 @@ class _AssistantBubble extends StatelessWidget {
           ),
 
           // feedback buttons
-          if (!message.isLoading && message.id != 'init')
+          if (!message.isLoading && message.canFeedback)
             Padding(
               padding: const EdgeInsets.only(
                 left: 8,
@@ -570,13 +673,15 @@ class _AssistantBubble extends StatelessWidget {
                   _FeedbackChip(
                     label: '좋았어요',
                     icon: Icons.thumb_up_alt_outlined,
-                    onTap: () {},
+                    selected: message.quickFeedback == 'UP',
+                    onTap: () => onQuickFeedback?.call(message.id, 'UP'),
                   ),
                   const SizedBox(width: 10),
                   _FeedbackChip(
                     label: '아쉬워요',
                     icon: Icons.thumb_down_alt_outlined,
-                    onTap: () {},
+                    selected: message.quickFeedback == 'DOWN',
+                    onTap: () => onQuickFeedback?.call(message.id, 'DOWN'),
                   ),
                   const SizedBox(width: 10),
                   _FeedbackTextButton(
@@ -792,11 +897,13 @@ class _FeedbackChip extends StatelessWidget {
   final String label;
   final IconData icon;
   final VoidCallback onTap;
+  final bool selected;
 
   const _FeedbackChip({
     required this.label,
     required this.icon,
     required this.onTap,
+    this.selected = false,
   });
 
   @override
@@ -812,23 +919,23 @@ class _FeedbackChip extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(100),
           border: Border.all(
-            color: const Color(0xFFDADADA),
+            color: selected ? const Color(0xFF252525) : const Color(0xFFDADADA),
           ),
-          color: Colors.white,
+          color: selected ? const Color(0xFF252525) : Colors.white,
         ),
         child: Row(
           children: [
             Icon(
               icon,
               size: 18,
-              color: const Color(0xFF666666),
+              color: selected ? Colors.white : const Color(0xFF666666),
             ),
             const SizedBox(width: 6),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Color(0xFF555555),
+                color: selected ? Colors.white : const Color(0xFF666666),
               ),
             ),
           ],
@@ -911,6 +1018,35 @@ class _FeedbackModalState extends State<_FeedbackModal> {
     '기타',
   ];
 
+  String _toApiRating(String rating) {
+    if (rating == '좋았어요') return 'UP';
+    if (rating == '아쉬웠어요') return 'DOWN';
+    return 'UP'; // 보통이에요 임시 처리
+  }
+
+  String _toApiTag(String tag) {
+    switch (tag) {
+      case '할머니 같았어요':
+        return 'NATURAL';
+      case '위로가 됐어요':
+        return 'WARM';
+      case '말투가 어색해요':
+        return 'AWKWARD_TONE';
+      case '사실이 틀렸어요':
+        return 'FACTUALLY_WRONG';
+      case '기억에 없는 말을 지어냈어요':
+        return 'HALLUCINATION';
+      case '목소리가 어색해요':
+        return 'AWKWARD_VOICE';
+      case '섬뜩하거나 불편했어요':
+        return 'UNCOMFORTABLE';
+      case '기타':
+        return 'OTHER';
+      default:
+        return 'OTHER';
+    }
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -931,8 +1067,8 @@ class _FeedbackModalState extends State<_FeedbackModal> {
     try {
       await _chatApi.submitFeedback(
         messageId: widget.messageId,
-        rating: _selectedRating,
-        tags: _selectedTags.toList(),
+        rating: _toApiRating(_selectedRating),
+        tags: _selectedTags.map(_toApiTag).toList(),
         comment: _controller.text.trim(),
       );
 

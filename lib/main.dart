@@ -1,7 +1,24 @@
 import 'package:flutter/material.dart';
+
+import 'core/network/api_client.dart';
+import 'features/auth/data/auth_api.dart';
 import 'features/chat/chat_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    final token = await AuthApi().login(
+      identifier: 'admin@talkto.local',
+      password: 'Admin1234!',
+    );
+
+    ApiClient.setToken(token);
+    debugPrint('LOGIN SUCCESS');
+  } catch (e) {
+    debugPrint('LOGIN ERROR: $e');
+  }
+
   runApp(const TalkToApp());
 }
 
@@ -10,15 +27,9 @@ class TalkToApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'TalkTo',
+    return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF7F7F5),
-        fontFamily: 'Pretendard',
-      ),
-      home: const ChatPage(),
+      home: ChatPage(),
     );
   }
 }
