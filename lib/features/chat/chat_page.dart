@@ -494,7 +494,7 @@ class _PersonaHeader extends StatelessWidget {
               ],
             ),
           ),
-          if (!isMobile) ...[
+          if (!isMobile)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
               decoration: BoxDecoration(
@@ -509,25 +509,32 @@ class _PersonaHeader extends StatelessWidget {
                 ),
               ),
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const AdminDashboardPage(),
-                  ),
-                );
-              },
-              child: const Text(
-                '관리자 대시보드',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF777777),
-                  decoration: TextDecoration.underline,
+          TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AdminDashboardPage(),
                 ),
+              );
+            },
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 4 : 8,
+                vertical: isMobile ? 4 : 8,
+              ),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              '관리자 대시보드',
+              style: TextStyle(
+                fontSize: isMobile ? 10 : 13,
+                color: const Color(0xFF777777),
+                decoration: TextDecoration.underline,
               ),
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -1414,7 +1421,7 @@ class _RatingButton extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 12,
             fontWeight: FontWeight.w700,
             color: selected ? _selectedTextColor : const Color(0xFF222222),
           ),
