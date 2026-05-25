@@ -30,7 +30,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       backgroundColor: const Color(0xFFFAFAFA),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width < 600 ? 420 : 640,
+          ),
           child: Column(
             children: [
               _AdminHeader(
@@ -38,7 +40,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               ),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(28, 24, 28, 48),
+                  padding: EdgeInsets.fromLTRB(
+                    MediaQuery.of(context).size.width < 600 ? 16 : 28,
+                    MediaQuery.of(context).size.width < 600 ? 16 : 24,
+                    MediaQuery.of(context).size.width < 600 ? 16 : 28,
+                    MediaQuery.of(context).size.width < 600 ? 28 : 48,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -122,9 +129,11 @@ class _AdminHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Container(
-      height: 88,
-      padding: const EdgeInsets.symmetric(horizontal: 28),
+      height: isMobile ? 72 : 88,
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 28),
       decoration: const BoxDecoration(
         color: Color(0xFFFFFBF0),
         border: Border(
@@ -135,7 +144,7 @@ class _AdminHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Expanded(
+          Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,17 +152,17 @@ class _AdminHeader extends StatelessWidget {
                 Text(
                   '개발자 통계/피드백 페이지',
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: isMobile ? 16 : 22,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF222222),
+                    color: const Color(0xFF222222),
                   ),
                 ),
-                SizedBox(height: 8),
+                SizedBox(height: isMobile ? 4 : 8),
                 Text(
-                  '⚠ 내부 개발자 확인용 · 가족 사용자에게 노출하지 않음',
+                  '⚠ 내부 개발자 확인용',
                   style: TextStyle(
-                    fontSize: 15,
-                    color: Color(0xFFCC5A00),
+                    fontSize: isMobile ? 11 : 15,
+                    color: const Color(0xFFCC5A00),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -161,14 +170,17 @@ class _AdminHeader extends StatelessWidget {
             ),
           ),
           SizedBox(
-            height: 56,
+            height: isMobile ? 42 : 56,
             child: OutlinedButton.icon(
               onPressed: onBack,
-              icon: const Icon(Icons.arrow_back, size: 20),
-              label: const Text(
-                '대화 화면으로',
+              icon: Icon(
+                Icons.arrow_back,
+                size: isMobile ? 16 : 20,
+              ),
+              label: Text(
+                '대화 화면',
                 style: TextStyle(
-                  fontSize: 17,
+                  fontSize: isMobile ? 12 : 17,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -176,9 +188,13 @@ class _AdminHeader extends StatelessWidget {
                 foregroundColor: const Color(0xFF222222),
                 side: const BorderSide(color: Color(0xFFD8D8D8)),
                 backgroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 12 : 24,
+                ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(
+                    isMobile ? 12 : 16,
+                  ),
                 ),
               ),
             ),
@@ -196,12 +212,14 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Text(
       title,
-      style: const TextStyle(
-        fontSize: 24,
+      style: TextStyle(
+        fontSize: isMobile ? 18 : 24,
         fontWeight: FontWeight.w700,
-        color: Color(0xFF222222),
+        color: const Color(0xFF222222),
       ),
     );
   }
@@ -238,10 +256,10 @@ class _MetricGrid extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           itemCount: metricItems.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: isMobile ? 1 : 2,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 20,
-            mainAxisExtent: 76,
+            crossAxisCount: 2,
+            mainAxisSpacing: isMobile ? 10 : 16,
+            crossAxisSpacing: isMobile ? 10 : 20,
+            mainAxisExtent: isMobile ? 64 : 76,
           ),
           itemBuilder: (context, index) {
             final item = metricItems[index];
@@ -268,12 +286,19 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 16,
+        vertical: isMobile ? 8 : 10,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: const Color(0xFFE1E1E1)),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(
+          isMobile ? 14 : 18,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,18 +306,18 @@ class _MetricCard extends StatelessWidget {
         children: [
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF222222),
+            style: TextStyle(
+              fontSize: isMobile ? 16 : 22,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF222222),
             ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: isMobile ? 2 : 4),
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 10,
-              color: Color(0xFF777777),
+            style: TextStyle(
+              fontSize: isMobile ? 9 : 10,
+              color: const Color(0xFF777777),
             ),
           ),
         ],
@@ -372,10 +397,10 @@ class _NegativeFeedbackGrid extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           itemCount: items.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: isMobile ? 1 : 2,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 20,
-            mainAxisExtent: 76,
+            crossAxisCount: 2,
+            mainAxisSpacing: isMobile ? 10 : 16,
+            crossAxisSpacing: isMobile ? 10 : 20,
+            mainAxisExtent: isMobile ? 64 : 76,
           ),
           itemBuilder: (context, index) {
             final item = items[index];
@@ -401,6 +426,8 @@ class _NegativeFeedbackCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
@@ -414,8 +441,8 @@ class _NegativeFeedbackCard extends StatelessWidget {
         children: [
           Text(
             count,
-            style: const TextStyle(
-              fontSize: 18,
+            style: TextStyle(
+              fontSize: isMobile ? 14 : 18,
               fontWeight: FontWeight.w600,
               color: Color(0xFFD40000),
             ),
@@ -423,8 +450,8 @@ class _NegativeFeedbackCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 10,
+            style: TextStyle(
+              fontSize: isMobile ? 9 : 10,
               color: Color(0xFFD40000),
             ),
           ),
@@ -443,51 +470,55 @@ class _ReviewList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFE1E1E1)),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      clipBehavior: Clip.hardEdge,
-      child: Table(
-        columnWidths: const {
-          0: FixedColumnWidth(88),
-          1: FixedColumnWidth(105),
-          2: FixedColumnWidth(70),
-          3: FixedColumnWidth(120),
-          4: FlexColumnWidth(),
-        },
-        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-        children: [
-          const TableRow(
-            decoration: BoxDecoration(color: Color(0xFFFAFAFA)),
-            children: [
-              _TableHeaderCell('일시'),
-              _TableHeaderCell('Session ID'),
-              _TableHeaderCell('평가'),
-              _TableHeaderCell('태그'),
-              _TableHeaderCell('코멘트'),
-            ],
-          ),
-          ...reviews.map(
-            (review) => TableRow(
-              decoration: const BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Color(0xFFEFEFEF)),
-                ),
-              ),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 720),
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const Color(0xFFE1E1E1)),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: Table(
+          columnWidths: const {
+            0: FixedColumnWidth(88),
+            1: FixedColumnWidth(105),
+            2: FixedColumnWidth(70),
+            3: FixedColumnWidth(120),
+            4: FlexColumnWidth(),
+          },
+          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+          children: [
+            const TableRow(
+              decoration: BoxDecoration(color: Color(0xFFFAFAFA)),
               children: [
-                _TableBodyCell(review.time),
-                _TableBodyCell(review.sessionId),
-                _RatingCell(review.rating),
-                _TagCell(review.tags),
-                _CommentCell(review.comment),
+                _TableHeaderCell('일시'),
+                _TableHeaderCell('Session ID'),
+                _TableHeaderCell('평가'),
+                _TableHeaderCell('태그'),
+                _TableHeaderCell('코멘트'),
               ],
             ),
-          ),
-        ],
+            ...reviews.map(
+              (review) => TableRow(
+                decoration: const BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: Color(0xFFEFEFEF)),
+                  ),
+                ),
+                children: [
+                  _TableBodyCell(review.time),
+                  _TableBodyCell(review.sessionId),
+                  _RatingCell(review.rating),
+                  _TagCell(review.tags),
+                  _CommentCell(review.comment),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -543,15 +574,17 @@ class _TableHeaderCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 16,
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 8 : 14,
+        vertical: isMobile ? 12 : 16,
       ),
       child: Text(
         text,
-        style: const TextStyle(
-          fontSize: 13,
+        style: TextStyle(
+          fontSize: isMobile ? 11 : 13,
           fontWeight: FontWeight.w700,
           color: Color(0xFF555555),
         ),
@@ -567,10 +600,12 @@ class _TableBodyCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 18,
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 8 : 14,
+        vertical: isMobile ? 12 : 18,
       ),
       child: SizedBox(
         width: double.infinity,
@@ -579,8 +614,8 @@ class _TableBodyCell extends StatelessWidget {
           softWrap: true,
           maxLines: null,
           overflow: TextOverflow.visible,
-          style: const TextStyle(
-            fontSize: 13,
+          style: TextStyle(
+            fontSize: isMobile ? 11 : 13,
             height: 1.5,
             color: Color(0xFF555555),
           ),
