@@ -13,10 +13,15 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   final AdminApi _adminApi = AdminApi();
   late final Future<AdminMetrics> _metricsFuture;
 
+  late final Future<List<NegativeFeedbackSummary>> _negativeSummaryFuture;
+  late final Future<List<FeedbackReview>> _feedbackReviewsFuture;
+
   @override
   void initState() {
     super.initState();
     _metricsFuture = _adminApi.getMetrics();
+    _negativeSummaryFuture = _adminApi.getNegativeSummary();
+    _feedbackReviewsFuture = _adminApi.getFeedbackReviews();
   }
 
   @override
@@ -61,11 +66,41 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       const SizedBox(height: 48),
                       const _SectionTitle('부정 피드백 큐'),
                       const SizedBox(height: 20),
-                      const _NegativeFeedbackGrid(),
+                      FutureBuilder<List<NegativeFeedbackSummary>>(
+                        future: _negativeSummaryFuture,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const _MetricLoadingBox();
+                          }
+
+                          if (snapshot.hasError) {
+                            return _MetricErrorBox(
+                                message: snapshot.error.toString());
+                          }
+
+                          return _NegativeFeedbackGrid(items: snapshot.data!);
+                        },
+                      ),
                       const SizedBox(height: 48),
                       const _SectionTitle('피드백 검토'),
                       const SizedBox(height: 20),
-                      const _ReviewList(),
+                      FutureBuilder<List<FeedbackReview>>(
+                        future: _feedbackReviewsFuture,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const _MetricLoadingBox();
+                          }
+
+                          if (snapshot.hasError) {
+                            return _MetricErrorBox(
+                                message: snapshot.error.toString());
+                          }
+
+                          return _ReviewList(reviews: snapshot.data!);
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -320,17 +355,14 @@ class _MetricErrorBox extends StatelessWidget {
 }
 
 class _NegativeFeedbackGrid extends StatelessWidget {
-  const _NegativeFeedbackGrid();
+  final List<NegativeFeedbackSummary> items;
+
+  const _NegativeFeedbackGrid({
+    required this.items,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final items = [
-      ('8건', '사실이 틀렸어요'),
-      ('5건', '기억에 없는 말을 지어냈어요'),
-      ('3건', '섬뜩하거나 불편했어요'),
-      ('4건', '목소리가 어색해요'),
-    ];
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 480;
@@ -348,8 +380,8 @@ class _NegativeFeedbackGrid extends StatelessWidget {
           itemBuilder: (context, index) {
             final item = items[index];
             return _NegativeFeedbackCard(
-              count: item.$1,
-              label: item.$2,
+              count: '${item.count}건',
+              label: item.tag,
             );
           },
         );
@@ -403,41 +435,14 @@ class _NegativeFeedbackCard extends StatelessWidget {
 }
 
 class _ReviewList extends StatelessWidget {
-  const _ReviewList();
+  final List<FeedbackReview> reviews;
+
+  const _ReviewList({
+    required this.reviews,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final reviews = [
-      _ReviewItemData(
-        time: '2026-04-29 14:23',
-        sessionId: 'session_1735478...a3f',
-        rating: '👍',
-        tags: ['할머니 같았어요', '위로가 됐어요'],
-        comment: '정말 할머니 목소리 같았어요.',
-      ),
-      _ReviewItemData(
-        time: '2026-04-29 13:45',
-        sessionId: 'session_1735471...b2e',
-        rating: '👎',
-        tags: ['말투가 어색해요'],
-        comment: '조금 부자연스러워요.',
-      ),
-      _ReviewItemData(
-        time: '2026-04-29 12:18',
-        sessionId: 'session_1735466...c4d',
-        rating: '👎',
-        tags: ['사실이 틀렸어요'],
-        comment: '할머니가 그렇게 말씀하신 적은 없어요.',
-      ),
-      _ReviewItemData(
-        time: '2026-04-29 11:02',
-        sessionId: 'session_1735461...e1f',
-        rating: '👎',
-        tags: ['섬뜩하거나 불편했어요'],
-        comment: '-',
-      ),
-    ];
-
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -457,9 +462,7 @@ class _ReviewList extends StatelessWidget {
         defaultVerticalAlignment: TableCellVerticalAlignment.middle,
         children: [
           const TableRow(
-            decoration: BoxDecoration(
-              color: Color(0xFFFAFAFA),
-            ),
+            decoration: BoxDecoration(color: Color(0xFFFAFAFA)),
             children: [
               _TableHeaderCell('일시'),
               _TableHeaderCell('Session ID'),
