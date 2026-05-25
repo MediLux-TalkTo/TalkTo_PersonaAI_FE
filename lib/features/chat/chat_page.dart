@@ -429,7 +429,7 @@ class _ChatPageState extends State<ChatPage> {
               onSend: _sendMessage,
               onVoiceTap: _toggleRecording,
             ),
-            const _FooterInfo(),
+            _FooterInfo(),
           ],
         ),
       ),
@@ -448,9 +448,12 @@ class _PersonaHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 600;
+
     return Container(
-      height: 118,
-      padding: const EdgeInsets.symmetric(horizontal: 28),
+      height: isMobile ? 82 : 118,
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 28),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(
@@ -459,11 +462,11 @@ class _PersonaHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const CircleAvatar(
-            radius: 32,
-            backgroundColor: Color(0xFFE1E1E1),
+          CircleAvatar(
+            radius: isMobile ? 22 : 32,
+            backgroundColor: const Color(0xFFE1E1E1),
           ),
-          const SizedBox(width: 18),
+          SizedBox(width: isMobile ? 12 : 18),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -471,55 +474,60 @@ class _PersonaHeader extends StatelessWidget {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
-                    fontSize: 22,
+                  style: TextStyle(
+                    fontSize: isMobile ? 17 : 22,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF222222),
+                    color: const Color(0xFF222222),
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   description,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    color: Color(0xFF777777),
+                  style: TextStyle(
+                    fontSize: isMobile ? 12 : 15,
+                    color: const Color(0xFF777777),
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF4F4F4),
-              borderRadius: BorderRadius.circular(100),
-            ),
-            child: const Text(
-              '가족 내부 테스트 · 기록 기반 AI 페르소나',
-              style: TextStyle(
-                fontSize: 15,
-                color: Color(0xFF555555),
+          if (!isMobile) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F4F4),
+                borderRadius: BorderRadius.circular(100),
               ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const AdminDashboardPage(),
+              child: const Text(
+                '가족 내부 테스트 · 기록 기반 AI 페르소나',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Color(0xFF555555),
                 ),
-              );
-            },
-            child: const Text(
-              '관리자 대시보드',
-              style: TextStyle(
-                fontSize: 13,
-                color: Color(0xFF777777),
-                decoration: TextDecoration.underline,
               ),
             ),
-          ),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AdminDashboardPage(),
+                  ),
+                );
+              },
+              child: const Text(
+                '관리자 대시보드',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF777777),
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -531,6 +539,9 @@ class _ScreenLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 600;
+
     return Container(
       height: 20,
       width: double.infinity,
@@ -547,7 +558,7 @@ class _ChatMessageList extends StatelessWidget {
   final ScrollController scrollController;
   final Future<void> Function(String messageId, String rating)? onQuickFeedback;
 
-  const _ChatMessageList({
+  _ChatMessageList({
     required this.messages,
     required this.isLoading,
     required this.scrollController,
@@ -556,11 +567,19 @@ class _ChatMessageList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 600;
+
     return Container(
       color: const Color(0xFFFAFAFA),
       child: ListView.builder(
         controller: scrollController,
-        padding: const EdgeInsets.fromLTRB(28, 20, 28, 36),
+        padding: EdgeInsets.fromLTRB(
+          isMobile ? 16 : 28,
+          isMobile ? 12 : 20,
+          isMobile ? 16 : 28,
+          isMobile ? 24 : 36,
+        ),
         itemCount: messages.length + (isLoading ? 1 : 0) + 1,
         itemBuilder: (context, index) {
           if (index == 0) {
@@ -602,6 +621,9 @@ class _ChatGuideText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 600;
+
     return const Padding(
       padding: EdgeInsets.only(bottom: 28),
       child: Center(
@@ -623,24 +645,29 @@ class _AssistantBubble extends StatelessWidget {
   final ChatMessage message;
   final Future<void> Function(String messageId, String rating)? onQuickFeedback;
 
-  const _AssistantBubble({
+  _AssistantBubble({
     required this.message,
     this.onQuickFeedback,
   });
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 600;
+
     return Align(
       alignment: Alignment.centerLeft,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            constraints: const BoxConstraints(maxWidth: 560),
+            constraints: BoxConstraints(
+              maxWidth: isMobile ? width * 0.78 : 560,
+            ),
             margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 22,
-              vertical: 12,
+            padding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 16 : 22,
+              vertical: isMobile ? 10 : 12,
             ),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -652,7 +679,7 @@ class _AssistantBubble extends StatelessWidget {
             child: Text(
               message.content,
               style: TextStyle(
-                fontSize: 17,
+                fontSize: isMobile ? 14 : 17,
                 height: 1.45,
                 color: message.isLoading
                     ? const Color(0xFF999999)
@@ -710,12 +737,20 @@ class _UserBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 600;
+
     return Align(
       alignment: Alignment.centerRight,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 560),
+        constraints: BoxConstraints(
+          maxWidth: isMobile ? width * 0.78 : 560,
+        ),
         margin: const EdgeInsets.only(bottom: 18),
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 22),
+        padding: EdgeInsets.symmetric(
+          horizontal: isMobile ? 16 : 32,
+          vertical: isMobile ? 12 : 22,
+        ),
         decoration: BoxDecoration(
           color: const Color(0xFF2B2B2B),
           borderRadius: BorderRadius.circular(24),
@@ -737,9 +772,9 @@ class _ChatInputBar extends StatelessWidget {
   final TextEditingController controller;
   final bool isLoading;
   final bool isRecording;
+  final bool isPreparingResponse;
   final VoidCallback onSend;
   final VoidCallback onVoiceTap;
-  final bool isPreparingResponse;
 
   const _ChatInputBar({
     required this.controller,
@@ -752,8 +787,93 @@ class _ChatInputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 600;
+
+    Widget inputField = TextField(
+      controller: controller,
+      enabled: !isLoading,
+      minLines: 1,
+      maxLines: 4,
+      style: TextStyle(fontSize: isMobile ? 14 : 16),
+      onSubmitted: (_) => onSend(),
+      decoration: InputDecoration(
+        hintText: '할머니한테 하고 싶은 말을 적어보세요.',
+        hintStyle: const TextStyle(color: Color(0xFF999999)),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: isMobile ? 16 : 26,
+          vertical: isMobile ? 14 : 22,
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(isMobile ? 16 : 18),
+          borderSide: const BorderSide(color: Color(0xFFD7D7D7)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(isMobile ? 16 : 18),
+          borderSide: const BorderSide(color: Color(0xFF333333)),
+        ),
+      ),
+    );
+
+    Widget sendButton = SizedBox(
+      height: isMobile ? 46 : 65,
+      width: isMobile ? null : 150,
+      child: ElevatedButton(
+        onPressed: isLoading ? null : onSend,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF252525),
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: const Color(0xFFCCCCCC),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(isMobile ? 14 : 16),
+          ),
+        ),
+        child: Text(
+          '보내기',
+          style: TextStyle(
+            fontSize: isMobile ? 14 : 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+
+    Widget voiceButton = SizedBox(
+      height: isMobile ? 46 : 65,
+      width: isMobile ? null : 184,
+      child: ElevatedButton(
+        onPressed: (isPreparingResponse || isLoading) ? null : onVoiceTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor:
+              isRecording ? const Color(0xFFB94343) : const Color(0xFF454545),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(isMobile ? 14 : 16),
+          ),
+        ),
+        child: Text(
+          isPreparingResponse
+              ? '답변 준비 중...'
+              : isRecording
+                  ? '● 듣는 중'
+                  : '● 말하기',
+          style: TextStyle(
+            fontSize: isMobile ? 14 : 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(28, 24, 28, 18),
+      padding: EdgeInsets.fromLTRB(
+        isMobile ? 16 : 28,
+        isMobile ? 14 : 24,
+        isMobile ? 16 : 28,
+        isMobile ? 12 : 18,
+      ),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(
@@ -762,98 +882,33 @@ class _ChatInputBar extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  enabled: !isLoading,
-                  minLines: 1,
-                  maxLines: 4,
-                  style: const TextStyle(fontSize: 16),
-                  onSubmitted: (_) => onSend(),
-                  decoration: InputDecoration(
-                    hintText: '할머니한테 하고 싶은 말을 적어보세요.',
-                    hintStyle: const TextStyle(
-                      color: Color(0xFF999999),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 26,
-                      vertical: 22,
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      borderSide: const BorderSide(color: Color(0xFFD7D7D7)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      borderSide: const BorderSide(color: Color(0xFF333333)),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              SizedBox(
-                height: 65,
-                width: 150,
-                child: ElevatedButton(
-                  onPressed: isLoading ? null : onSend,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF252525),
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: const Color(0xFFCCCCCC),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text(
-                    '보내기',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              SizedBox(
-                height: 65,
-                width: 184,
-                child: ElevatedButton(
-                  onPressed:
-                      (isPreparingResponse || isLoading) ? null : onVoiceTap,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isRecording
-                        ? const Color(0xFFB94343)
-                        : const Color(0xFF454545),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Text(
-                    isPreparingResponse
-                        ? '답변 준비 중...'
-                        : isRecording
-                            ? '● 듣는 중'
-                            : '● 말하기',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          const Text(
+          if (isMobile) ...[
+            inputField,
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(child: sendButton),
+                const SizedBox(width: 8),
+                Expanded(child: voiceButton),
+              ],
+            ),
+          ] else ...[
+            Row(
+              children: [
+                Expanded(child: inputField),
+                const SizedBox(width: 14),
+                sendButton,
+                const SizedBox(width: 12),
+                voiceButton,
+              ],
+            ),
+          ],
+          SizedBox(height: isMobile ? 10 : 14),
+          Text(
             '구체적인 사실은 기억에 근거가 있을 때만 답하도록 설계되어 있어요.',
             style: TextStyle(
-              fontSize: 13,
-              color: Color(0xFF7A7A7A),
+              fontSize: isMobile ? 11 : 13,
+              color: const Color(0xFF7A7A7A),
             ),
           ),
         ],
@@ -867,27 +922,26 @@ class _FooterInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Container(
-      height: 84,
-      padding: const EdgeInsets.symmetric(horizontal: 28),
+      height: isMobile ? 48 : 84,
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 28),
       decoration: const BoxDecoration(
         color: Color(0xFFFAFAFA),
         border: Border(
           top: BorderSide(color: Color(0xFFE5E5E5)),
         ),
       ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(height: 16),
-          Text(
-            '비공개 링크 테스트 · anonymous_session_id 기준으로 사용 기록 저장',
-            style: TextStyle(
-              fontSize: 12,
-              color: Color(0xFF888888),
-            ),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          '비공개 링크 테스트 · anonymous_session_id 기준으로 사용 기록 저장',
+          style: TextStyle(
+            fontSize: isMobile ? 10 : 12,
+            color: const Color(0xFF888888),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -908,6 +962,9 @@ class _FeedbackChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 600;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(100),
@@ -954,6 +1011,9 @@ class _FeedbackTextButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 600;
+
     return TextButton(
       onPressed: onTap,
       style: ButtonStyle(
@@ -1093,12 +1153,15 @@ class _FeedbackModalState extends State<_FeedbackModal> {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 600;
+
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       backgroundColor: Colors.transparent,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          maxWidth: 520,
+        constraints: BoxConstraints(
+          maxWidth: isMobile ? width * 0.78 : 560,
         ),
         child: Container(
           padding: const EdgeInsets.all(28),
@@ -1374,6 +1437,9 @@ class _FeedbackTagChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 600;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
