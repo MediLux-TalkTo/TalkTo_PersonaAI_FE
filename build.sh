@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 set -e
 
-git clone https://github.com/flutter/flutter.git --depth 1 -b stable "$HOME/flutter"
+git clone https://github.com/flutter/flutter.git -b stable --depth 1 ./flutter
+export PATH="$PATH:$(pwd)/flutter/bin"
 
-export PATH="$HOME/flutter/bin:$PATH"
-
-flutter --version
+flutter doctor -v
 flutter config --enable-web
 flutter pub get
 flutter build web --release
