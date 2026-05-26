@@ -327,25 +327,6 @@ class _ChatPageState extends State<ChatPage> {
       return;
     }
 
-    setState(() {
-      _messages.add(
-        ChatMessage(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          role: 'user',
-          content: '음성 메시지를 보냈어요.',
-        ),
-      );
-
-      _messages.add(
-        ChatMessage(
-          id: 'voice-loading',
-          role: 'assistant',
-          content: '할머니가 말하는 중...',
-          isLoading: true,
-        ),
-      );
-    });
-
     _scrollToBottom();
 
     try {
@@ -369,6 +350,12 @@ class _ChatPageState extends State<ChatPage> {
         throw Exception('voice response data가 없습니다: $response');
       }
 
+      final userMessage = data['userMessage'];
+
+      final sttText = userMessage is Map<String, dynamic>
+          ? (userMessage['sttText'] ?? userMessage['content'] ?? '').toString()
+          : '';
+
       final assistantMessage = data['assistantMessage'];
 
       if (assistantMessage == null ||
@@ -389,6 +376,24 @@ class _ChatPageState extends State<ChatPage> {
 
       setState(() {
         _messages.removeWhere((m) => m.id == 'voice-loading');
+
+        if (sttText.isNotEmpty) {
+          _messages.add(
+            ChatMessage(
+              id: '${assistantId}_user_voice',
+              role: 'user',
+              content: sttText,
+            ),
+          );
+        } else {
+          _messages.add(
+            ChatMessage(
+              id: '${assistantId}_user_voice_fallback',
+              role: 'user',
+              content: '음성 메시지를 보냈어요.',
+            ),
+          );
+        }
 
         _messages.add(
           ChatMessage(
