@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:record/record.dart';
 
 import '../../../shared/widgets/responsive_container.dart';
@@ -56,12 +57,13 @@ class _ChatPageState extends State<ChatPage> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ChatApi _chatApi = ChatApi();
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
   String? _conversationId;
   String? _activePersonaId;
   String _personaName = '할머니';
   String _personaDescription = '기록 기반 AI 페르소나';
-
-  final AudioRecorder _audioRecorder = AudioRecorder();
 
   bool _isLoading = false;
   bool _isRecording = false;
@@ -168,7 +170,24 @@ class _ChatPageState extends State<ChatPage> {
     _controller.dispose();
     _scrollController.dispose();
     _audioRecorder.dispose();
+    _audioPlayer.dispose();
     super.dispose();
+  }
+
+  Future<void> _playTtsIfExists(String? ttsAudioUrl) async {
+    if (ttsAudioUrl == null || ttsAudioUrl.isEmpty) return;
+
+    final url = ttsAudioUrl.startsWith('http')
+        ? ttsAudioUrl
+        : 'https://talkto-personaai-be.onrender.com$ttsAudioUrl';
+
+    try {
+      await _audioPlayer.stop();
+      await _audioPlayer.setUrl(url);
+      await _audioPlayer.play();
+    } catch (e) {
+      debugPrint('TTS play error: $e');
+    }
   }
 
   Future<void> _sendMessage() async {
@@ -218,6 +237,8 @@ class _ChatPageState extends State<ChatPage> {
       final assistantContent =
           (assistantMessage['content'] ?? '답변을 불러오지 못했습니다.').toString();
 
+      final ttsAudioUrl = assistantMessage['ttsAudioUrl']?.toString();
+
       setState(() {
         _messages.add(
           ChatMessage(
@@ -228,6 +249,7 @@ class _ChatPageState extends State<ChatPage> {
           ),
         );
       });
+      await _playTtsIfExists(ttsAudioUrl);
     } catch (e) {
       debugPrint('sendMessage error: $e');
 
@@ -361,6 +383,8 @@ class _ChatPageState extends State<ChatPage> {
       final assistantContent =
           (assistantMessage['content'] ?? '음성 답변을 불러오지 못했습니다.').toString();
 
+      final ttsAudioUrl = assistantMessage['ttsAudioUrl']?.toString();
+
       if (!mounted) return;
 
       setState(() {
@@ -377,6 +401,7 @@ class _ChatPageState extends State<ChatPage> {
 
         _isPreparingResponse = false;
       });
+      await _playTtsIfExists(ttsAudioUrl);
     } catch (e) {
       if (!mounted) return;
 
