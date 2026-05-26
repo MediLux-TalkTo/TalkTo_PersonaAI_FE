@@ -267,11 +267,11 @@ class _ChatPageState extends State<ChatPage> {
 
       await _audioRecorder.start(
         const RecordConfig(
-          encoder: AudioEncoder.wav,
+          encoder: AudioEncoder.opus,
           sampleRate: 16000,
           numChannels: 1,
         ),
-        path: 'talkto_voice_${DateTime.now().millisecondsSinceEpoch}.wav',
+        path: 'talkto_voice_${DateTime.now().millisecondsSinceEpoch}.webm',
       );
 
       if (!mounted) return;
@@ -329,10 +329,17 @@ class _ChatPageState extends State<ChatPage> {
     try {
       await _ensureConversation();
 
+      debugPrint('voice POST start: $_conversationId');
+      debugPrint('voice audio path: $path');
+      debugPrint('voice personaId: $_activePersonaId');
+
       final response = await _chatApi.sendVoiceMessage(
         conversationId: _conversationId!,
         audioPath: path,
+        personaId: _activePersonaId,
       );
+
+      debugPrint('voice POST response: $response');
 
       final data = response['data'];
 
