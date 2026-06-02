@@ -1,3 +1,4 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../admin/data/admin_api.dart';
@@ -15,6 +16,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   late final Future<List<NegativeFeedbackSummary>> _negativeSummaryFuture;
   late final Future<List<FeedbackReview>> _feedbackReviewsFuture;
+  late final Future<DailyMetricsResponse> _dailyMetricsFuture;
 
   @override
   void initState() {
@@ -22,6 +24,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     _metricsFuture = _adminApi.getMetrics();
     _negativeSummaryFuture = _adminApi.getNegativeSummary();
     _feedbackReviewsFuture = _adminApi.getFeedbackReviews();
+    _dailyMetricsFuture = _adminApi.getDailyMetrics();
   }
 
   @override
@@ -68,6 +71,25 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                           return _MetricGrid(
                             metrics: snapshot.data!,
                           );
+                        },
+                      ),
+                      const SizedBox(height: 48),
+                      const _SectionTitle('최근 14일 일별 통계'),
+                      const SizedBox(height: 20),
+                      FutureBuilder<DailyMetricsResponse>(
+                        future: _dailyMetricsFuture,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const _MetricLoadingBox();
+                          }
+
+                          if (snapshot.hasError) {
+                            return _MetricErrorBox(
+                                message: snapshot.error.toString());
+                          }
+
+                          return _DailyMetricsSection(data: snapshot.data!);
                         },
                       ),
                       const SizedBox(height: 48),
@@ -719,6 +741,341 @@ class _TagCell extends StatelessWidget {
           );
         }).toList(),
       ),
+    );
+  }
+}
+
+class _DailyMetricsSection extends StatelessWidget {
+  final DailyMetricsResponse data;
+
+  const _DailyMetricsSection({
+    required this.data,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final items = data.items;
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
+    if (items.isEmpty) {
+      return const _MetricErrorBox(message: '일별 통계 데이터가 없습니다.');
+    }
+
+    return Column(
+      children: [
+        _DailyBarChartCard(
+          title: '사용자 / 대화 세션',
+          items: items,
+          firstLabel: '신규 사용자',
+          secondLabel: '대화 세션',
+          firstValue: (item) => item.newUsers,
+          secondValue: (item) => item.conversationSessions,
+        ),
+        SizedBox(height: isMobile ? 14 : 20),
+        _DailyBarChartCard(
+          title: '메시지 / 음성 메시지',
+          items: items,
+          firstLabel: '전체 메시지',
+          secondLabel: '음성 메시지',
+          firstValue: (item) => item.messages,
+          secondValue: (item) => item.voiceMessages,
+        ),
+        SizedBox(height: isMobile ? 14 : 20),
+        _FeedbackBarChartCard(items: items),
+      ],
+    );
+  }
+}
+
+class _DailyBarChartCard extends StatelessWidget {
+  final String title;
+  final List<DailyMetricItem> items;
+  final String firstLabel;
+  final String secondLabel;
+  final int Function(DailyMetricItem item) firstValue;
+  final int Function(DailyMetricItem item) secondValue;
+
+  const _DailyBarChartCard({
+    required this.title,
+    required this.items,
+    required this.firstLabel,
+    required this.secondLabel,
+    required this.firstValue,
+    required this.secondValue,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    final maxY = items
+        .map((e) => [firstValue(e), secondValue(e)])
+        .expand((e) => e)
+        .fold<int>(0, (prev, value) => value > prev ? value : prev)
+        .toDouble();
+
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 14 : 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE1E1E1)),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ChartHeader(
+            title: title,
+            labels: [firstLabel, secondLabel],
+          ),
+          SizedBox(height: isMobile ? 16 : 22),
+          SizedBox(
+            height: isMobile ? 180 : 220,
+            child: BarChart(
+              BarChartData(
+                maxY: maxY == 0 ? 5 : maxY + 2,
+                barGroups: List.generate(items.length, (index) {
+                  final item = items[index];
+
+                  return BarChartGroupData(
+                    x: index,
+                    barsSpace: 3,
+                    barRods: [
+                      BarChartRodData(
+                        toY: firstValue(item).toDouble(),
+                        width: isMobile ? 5 : 7,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      BarChartRodData(
+                        toY: secondValue(item).toDouble(),
+                        width: isMobile ? 5 : 7,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ],
+                  );
+                }),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          value.toInt().toString(),
+                          style: TextStyle(
+                            fontSize: isMobile ? 9 : 10,
+                            color: const Color(0xFF888888),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index < 0 || index >= items.length) {
+                          return const SizedBox.shrink();
+                        }
+
+                        final date = items[index].date;
+                        final label = date.length >= 10
+                            ? date.substring(5).replaceAll('-', '/')
+                            : date;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              fontSize: isMobile ? 8 : 9,
+                              color: const Color(0xFF777777),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                gridData: const FlGridData(show: true),
+                borderData: FlBorderData(show: false),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeedbackBarChartCard extends StatelessWidget {
+  final List<DailyMetricItem> items;
+
+  const _FeedbackBarChartCard({
+    required this.items,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
+    final maxY = items
+        .map((e) => e.feedbackTotal)
+        .fold<int>(0, (prev, value) => value > prev ? value : prev)
+        .toDouble();
+
+    return Container(
+      padding: EdgeInsets.all(isMobile ? 14 : 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE1E1E1)),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _ChartHeader(
+            title: '피드백 반응',
+            labels: ['긍정', '중립', '부정'],
+          ),
+          SizedBox(height: isMobile ? 16 : 22),
+          SizedBox(
+            height: isMobile ? 180 : 220,
+            child: BarChart(
+              BarChartData(
+                maxY: maxY == 0 ? 5 : maxY + 2,
+                barGroups: List.generate(items.length, (index) {
+                  final item = items[index];
+
+                  return BarChartGroupData(
+                    x: index,
+                    barsSpace: 2,
+                    barRods: [
+                      BarChartRodData(
+                        toY: item.feedbackPositive.toDouble(),
+                        width: isMobile ? 4 : 6,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      BarChartRodData(
+                        toY: item.feedbackNeutral.toDouble(),
+                        width: isMobile ? 4 : 6,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      BarChartRodData(
+                        toY: item.feedbackNegative.toDouble(),
+                        width: isMobile ? 4 : 6,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ],
+                  );
+                }),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          value.toInt().toString(),
+                          style: TextStyle(
+                            fontSize: isMobile ? 9 : 10,
+                            color: const Color(0xFF888888),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index < 0 || index >= items.length) {
+                          return const SizedBox.shrink();
+                        }
+
+                        final date = items[index].date;
+                        final label = date.length >= 10
+                            ? date.substring(5).replaceAll('-', '/')
+                            : date;
+
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              fontSize: isMobile ? 8 : 9,
+                              color: const Color(0xFF777777),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                gridData: const FlGridData(show: true),
+                borderData: FlBorderData(show: false),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChartHeader extends StatelessWidget {
+  final String title;
+  final List<String> labels;
+
+  const _ChartHeader({
+    required this.title,
+    required this.labels,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: isMobile ? 14 : 17,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF222222),
+            ),
+          ),
+        ),
+        Wrap(
+          spacing: isMobile ? 6 : 10,
+          children: labels.map((label) {
+            return Text(
+              label,
+              style: TextStyle(
+                fontSize: isMobile ? 9 : 11,
+                color: const Color(0xFF777777),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }

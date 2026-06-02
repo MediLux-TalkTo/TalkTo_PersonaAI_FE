@@ -42,6 +42,19 @@ class AdminApi {
             ))
         .toList();
   }
+
+  Future<DailyMetricsResponse> getDailyMetrics() async {
+    final response = await ApiClient.dio.get('/admin/metrics/daily');
+    final data = response.data['data'];
+
+    if (data == null) {
+      throw Exception('daily metrics data가 없습니다.');
+    }
+
+    return DailyMetricsResponse.fromJson(
+      Map<String, dynamic>.from(data),
+    );
+  }
 }
 
 class AdminMetrics {
@@ -114,6 +127,77 @@ class FeedbackReview {
       rating: json['rating'] ?? '',
       tags: List<String>.from(json['tags'] ?? []),
       comment: json['comment'] ?? '-',
+    );
+  }
+}
+
+class DailyMetricsResponse {
+  final String timeZone;
+  final int days;
+  final List<DailyMetricItem> items;
+
+  DailyMetricsResponse({
+    required this.timeZone,
+    required this.days,
+    required this.items,
+  });
+
+  factory DailyMetricsResponse.fromJson(Map<String, dynamic> json) {
+    return DailyMetricsResponse(
+      timeZone: json['timeZone'] ?? 'Asia/Seoul',
+      days: json['days'] ?? 14,
+      items: (json['items'] as List<dynamic>? ?? [])
+          .map(
+            (e) => DailyMetricItem.fromJson(
+              Map<String, dynamic>.from(e),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class DailyMetricItem {
+  final String date;
+  final int newUsers;
+  final int conversationSessions;
+  final int messages;
+  final int voiceMessages;
+  final int assistantMessages;
+  final int feedbackPositive;
+  final int feedbackNeutral;
+  final int feedbackNegative;
+  final int feedbackTotal;
+  final double feedbackResponseRate;
+
+  DailyMetricItem({
+    required this.date,
+    required this.newUsers,
+    required this.conversationSessions,
+    required this.messages,
+    required this.voiceMessages,
+    required this.assistantMessages,
+    required this.feedbackPositive,
+    required this.feedbackNeutral,
+    required this.feedbackNegative,
+    required this.feedbackTotal,
+    required this.feedbackResponseRate,
+  });
+
+  factory DailyMetricItem.fromJson(Map<String, dynamic> json) {
+    return DailyMetricItem(
+      date: json['date'] ?? '',
+      newUsers: json['newUsers'] ?? 0,
+      conversationSessions: json['conversationSessions'] ?? 0,
+      messages: json['messages'] ?? 0,
+      voiceMessages: json['voiceMessages'] ?? 0,
+      assistantMessages: json['assistantMessages'] ?? 0,
+      feedbackPositive: json['feedbackPositive'] ?? 0,
+      feedbackNeutral: json['feedbackNeutral'] ?? 0,
+      feedbackNegative: json['feedbackNegative'] ?? 0,
+      feedbackTotal: json['feedbackTotal'] ?? 0,
+      feedbackResponseRate:
+          ((json['feedbackResponseRate'] ?? 0) as num).toDouble(),
     );
   }
 }
