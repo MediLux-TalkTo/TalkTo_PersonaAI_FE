@@ -519,15 +519,15 @@ class _PersonaHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: isMobile ? 12 : 15,
-                    color: const Color(0xFF777777),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                // Text(
+                //   description,
+                //   style: TextStyle(
+                //     fontSize: isMobile ? 12 : 15,
+                //     color: const Color(0xFF777777),
+                //   ),
+                //   maxLines: 1,
+                //   overflow: TextOverflow.ellipsis,
+                // ),
               ],
             ),
           ),
