@@ -179,7 +179,7 @@ class _ChatPageState extends State<ChatPage> {
 
     final url = ttsAudioUrl.startsWith('http')
         ? ttsAudioUrl
-        : 'https://talkto-personaai-be.onrender.com$ttsAudioUrl';
+        : 'https://talkto-personaai-be-agcd.onrender.com$ttsAudioUrl';
 
     try {
       await _audioPlayer.stop();
